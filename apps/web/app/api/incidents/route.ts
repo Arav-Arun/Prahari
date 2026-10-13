@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { insertIncident, listIncidents, updateIncident, listResponders, getTourist } from "@/lib/db";
-import { findNearestResponder } from "@/lib/services/dispatchEngine";
+import { insertIncident, listIncidents, updateIncident, getTourist, getIncident } from "@/lib/db";
+import { availableResponders, findNearestResponder } from "@/lib/services/dispatchEngine";
 import { emitToGateway } from "@/lib/services/gatewayEmit";
 import { canAccessTouristData, requireAuth } from "@/lib/auth/guards";
 import { notifyEmergencyContacts } from "@/lib/services/emergencyNotifications";
-import { isFixtureIncident, operationalIncidents, operationalResponders } from "@/lib/operationalData";
+import { isFixtureIncident, operationalIncidents } from "@/lib/operationalData";
 import { isTravellerAssistanceLanguageCode } from '@/lib/languages';
+import { newIncidentId } from '@/lib/ids';
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request, ['tourist', 'authority', 'admin', 'responder']);
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const incidentLat = location?.lat ?? lat;
     const incidentLng = location?.lng ?? lng;
-    const incidentId = body.incidentId ?? `INC-${Math.floor(1000 + Math.random() * 9000)}`;
+    const incidentId = body.incidentId ?? newIncidentId();
 
     if (!touristId) {
       return NextResponse.json({ success: false, error: 'An authenticated tourist identity is required.' }, { status: 400 });
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     // A queued browser retry and a BLE gateway uplink can carry the same
     // packet. Treat the incident ID as the idempotency key so the traveller
     // does not receive duplicate contact notifications or case records.
-    const existingIncident = (await listIncidents(200)).find((item: any) => item.incidentId === incidentId);
+    const existingIncident = await getIncident(incidentId);
     if (existingIncident) {
       if (existingIncident.touristId !== touristId) {
         return NextResponse.json({ success: false, error: 'An incident with this ID already exists.' }, { status: 409 });
@@ -74,22 +75,8 @@ export async function POST(request: NextRequest) {
         idempotent: true,
       });
     }
-    // Matching is limited to responder units genuinely registered in the
-    // database.  If none are available, the incident remains unassigned.
-    const candidates = operationalResponders(await listResponders())
-      .filter((responder: any) => String(responder.status ?? '').trim().toLowerCase() === 'available')
-      .map((r: any) => ({
-        id: r.id ?? r.responderId,
-        unitId: r.unitId ?? r.responderId,
-        name: r.name ?? r.responderId ?? 'Unnamed responder',
-        type: r.type ?? r.department,
-        phone: r.phone ?? '',
-        lat: r.location?.lat,
-        lng: r.location?.lng,
-      }))
-      .filter((r: any) => typeof r.lat === 'number' && typeof r.lng === 'number');
-
-    const match = findNearestResponder(incidentLat, incidentLng, candidates);
+    // Only registered responders are matched; otherwise the desk assigns one.
+    const match = findNearestResponder(incidentLat, incidentLng, await availableResponders());
 
     const initialMessages: any[] = [];
     if (voiceStatement) {
@@ -161,7 +148,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'The emergency incident could not be recorded. Call local emergency services directly.' }, { status: 503 });
     }
 
-    const notificationPlan = await notifyEmergencyContacts(tourist.emergencyContacts, incidentId);
+    const notificationPlan = await notifyEmergencyContacts(tourist.emergencyContacts, incidentId, {
+      kind: 'sos',
+      travellerName: tourist.name,
+      location: { lat: incidentLat, lng: incidentLng },
+    });
     const updatedRecord = (await updateIncident(incidentId, { emergencyContactNotifications: notificationPlan })) ?? incident;
 
     // Notify the realtime gateway so the authority dashboard updates instantly
@@ -195,14 +186,10 @@ export async function GET(request: NextRequest) {
   const { session } = auth;
 
   try {
-    let incidents: any[] = operationalIncidents(await listIncidents(50));
-
-    // If tourist, filter to only their incidents
-    if (session.role === 'tourist' && session.touristId) {
-      incidents = incidents.filter(
-        (i) => i.touristId === session.touristId || i.touristId === session.userId
-      );
-    }
+    // A traveller only ever sees their own incidents.
+    const incidents = session.role === 'tourist'
+      ? await listIncidents(20, session.touristId ?? session.userId)
+      : operationalIncidents(await listIncidents(50));
 
     return NextResponse.json({ success: true, incidents });
   } catch (error: any) {
@@ -226,7 +213,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: "incidentId is required" }, { status: 400 });
     }
 
-    const existing = (await listIncidents(200)).find((incident: any) => incident.incidentId === incidentId);
+    const existing = await getIncident(incidentId);
     if (!existing) {
       return NextResponse.json({ success: false, error: 'Incident not found.' }, { status: 404 });
     }
@@ -243,19 +230,7 @@ export async function PATCH(request: NextRequest) {
       if (typeof lat !== 'number' || typeof lng !== 'number') {
         return NextResponse.json({ success: false, error: 'A reported incident location is required before dispatch.' }, { status: 400 });
       }
-      const candidates = operationalResponders(await listResponders())
-        .filter((responder: any) => String(responder.status ?? '').trim().toLowerCase() === 'available')
-        .map((responder: any) => ({
-          id: responder.id ?? responder.responderId,
-          unitId: responder.unitId ?? responder.responderId,
-          name: responder.name ?? responder.responderId ?? 'Unnamed responder',
-          type: responder.type ?? responder.department,
-          phone: responder.phone ?? '',
-          lat: responder.location?.lat,
-          lng: responder.location?.lng,
-        }))
-        .filter((responder: any) => typeof responder.lat === 'number' && typeof responder.lng === 'number');
-      const match = findNearestResponder(lat, lng, candidates);
+      const match = findNearestResponder(lat, lng, await availableResponders());
       if (!match) {
         return NextResponse.json({
           success: false,
@@ -296,9 +271,20 @@ export async function PATCH(request: NextRequest) {
 
     const fields: Record<string, any> = {};
     if (status) fields.status = status;
-    if (assignedResponderUnitId) fields.assignedResponderUnitId = assignedResponderUnitId;
-    if (assignedResponderName) fields.assignedResponderName = assignedResponderName;
-    if (typeof etaMinutes === "number") fields.etaMinutes = etaMinutes;
+    const isStaff = session.role !== 'tourist';
+    if (isStaff && assignedResponderUnitId) fields.assignedResponderUnitId = String(assignedResponderUnitId).slice(0, 120);
+    if (isStaff && assignedResponderName) fields.assignedResponderName = String(assignedResponderName).slice(0, 120);
+    if (isStaff && typeof etaMinutes === "number") fields.etaMinutes = etaMinutes;
+    if (fields.assignedResponderName) {
+      fields.timeline = [
+        ...(Array.isArray(existing.timeline) ? existing.timeline : []),
+        {
+          event: `Assigned ${fields.assignedResponderName}${typeof etaMinutes === 'number' ? ` (ETA ${etaMinutes} min)` : ''}.`,
+          at: new Date().toISOString(),
+          actor: session.name,
+        },
+      ];
+    }
     if (status === "resolved" || status === "RESOLVED") fields.resolvedAt = new Date().toISOString();
     if (status === 'CANCELLED') {
       fields.cancelledAt = new Date().toISOString();
@@ -326,14 +312,4 @@ export async function PATCH(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
-
-export async function DELETE(request: NextRequest) {
-  // Incident history is part of the protected operational audit trail. Cases
-  // can be cancelled, resolved, or returned for correction, but never erased
-  // through the application API.
-  return NextResponse.json({
-    success: false,
-    error: 'Incident deletion is disabled. Resolve or cancel the incident to preserve the audit trail.',
-  }, { status: 405 });
 }

@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { QrCode, UserCheck, FlaskConical, AlertTriangle, Link2, LockKeyhole, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import { QrCode, UserCheck, Link2 } from 'lucide-react';
 import { generateDigitalIdQr } from '@/lib/services/digitalId';
 
-export interface DigitalIdTourist {
+interface DigitalIdTourist {
   touristId: string;
   name: string;
   nationality: string;
@@ -59,19 +60,10 @@ export default function DigitalIdCard({ tourist }: { tourist: DigitalIdTourist |
 
   if (!tourist || !did) {
     return (
-      <section className="minimal-card p-6 text-ink">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="mt-0.5 shrink-0 text-amber-300" size={20} />
-          <div>
-            <h3 className="text-lg font-semibold">No credential issued yet</h3>
-            <p className="mt-1 text-sm text-ink-soft">
-              Complete identity verification to receive a Digital Tourist ID.
-            </p>
-            <a href="/onboarding" className="minimal-button minimal-button-primary mt-4 text-sm">
-              Start verification →
-            </a>
-          </div>
-        </div>
+      <section className="minimal-card">
+        <h2 className="font-semibold">No Digital Tourist ID yet</h2>
+        <p className="mt-1 text-sm text-ink-soft">Verify your identity to get one.</p>
+        <Link href="/onboarding" className="minimal-button minimal-button-primary mt-4">Start verification</Link>
       </section>
     );
   }
@@ -79,120 +71,74 @@ export default function DigitalIdCard({ tourist }: { tourist: DigitalIdTourist |
   const isSandbox = Boolean(tourist.credential?.sandbox);
   const revoked = tourist.credentialStatus === 'revoked' || tourist.credentialStatus === 'suspended';
   const anchor = anchorTxHash ? chainLabel(tourist.anchorChainId) : null;
+  const shortTx = anchorTxHash ? `${anchorTxHash.slice(0, 10)}…${anchorTxHash.slice(-8)}` : '';
 
   return (
-    <section className="minimal-card relative p-6 text-ink">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-        <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-xl font-semibold tracking-tight text-ink">
-                Digital Tourist ID
-              </h3>
-              {revoked ? (
-                <span className="rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-semibold text-red-300">{tourist.credentialStatus}</span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">
-                  <UserCheck className="size-3.5" /> Verified
-                </span>
-              )}
-            </div>
-            <p className="mt-1 break-all font-mono text-xs text-ink-soft">{did}</p>
+    <section className="minimal-card">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-semibold">Digital Tourist ID</h2>
+            {revoked ? (
+              <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-800">{tourist.credentialStatus}</span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                <UserCheck className="size-3.5" /> Verified
+              </span>
+            )}
+            {isSandbox && <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-ink-soft">Sandbox</span>}
+          </div>
+          <p className="mt-1 break-all font-mono text-xs text-ink-soft">{did}</p>
         </div>
-
-        <button onClick={() => setShowQr(!showQr)} className="minimal-button minimal-button-primary text-sm">
-          <QrCode className="w-4 h-4" />
-          {showQr ? 'Hide QR' : 'Show QR'}
+        <button onClick={() => setShowQr(!showQr)} className="minimal-button minimal-button-secondary">
+          <QrCode className="size-4" /> {showQr ? 'Hide QR' : 'Show QR'}
         </button>
       </div>
 
-      {isSandbox && (
-        <div className="mb-3 flex items-center gap-2 rounded-lg border border-sky-400/30 bg-sky-400/10 px-3 py-2 text-xs text-ink-soft">
-          <FlaskConical className="w-3.5 h-3.5 shrink-0" />
-          <span>Issued by a simulated verification provider — not a government-recognised credential.</span>
-        </div>
-      )}
-
-      {anchor ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 py-3 text-xs">
-          <Link2 className="w-3.5 h-3.5 shrink-0 text-success" />
-          <span className="font-semibold text-ink">Anchored on-chain</span>
-          <span className="text-ink-soft">· {anchor.name} · credential hash immutably recorded</span>
-          {anchor.explorer ? (
-            <a href={`${anchor.explorer}${tourist.anchorTxHash}`} target="_blank" rel="noopener noreferrer"
-              className="font-mono text-accent-strong underline break-all">
-              {tourist.anchorTxHash!.slice(0, 10)}…{tourist.anchorTxHash!.slice(-8)}
-            </a>
-          ) : (
-            <span className="font-mono text-ink-soft break-all">
-              tx {tourist.anchorTxHash!.slice(0, 10)}…{tourist.anchorTxHash!.slice(-8)}
-            </span>
-          )}
-          <span className="w-full text-ink-soft">No personal wallet was connected: this anchor was submitted by the Prahari server wallet.</span>
-        </div>
-      ) : (
-        <div className="mb-3 flex items-start gap-2 rounded-lg border border-line bg-surface-2 px-3 py-3 text-xs">
-          <Link2 className="w-3.5 h-3.5 shrink-0 text-ink-soft" />
-          <span><strong>Blockchain anchor not recorded.</strong> Your credential remains signed and verifiable, but an on-chain registry must be configured before a server anchor can be created.</span>
-        </div>
-      )}
-
       {showQr ? (
-        <div className="my-2 flex flex-col items-center justify-center rounded-xl border border-line bg-surface-2 p-5 text-ink">
+        <div className="mt-5 flex flex-col items-center rounded-xl border border-line bg-surface-2 p-5">
           {qrCodeUrl ? (
-            <Image src={qrCodeUrl} alt="Digital Tourist ID QR Code" width={176} height={176} unoptimized className="h-44 w-44 object-contain rounded-nb border-2 border-line bg-white p-2" />
+            <Image src={qrCodeUrl} alt="Digital Tourist ID QR code" width={176} height={176} unoptimized className="size-44 rounded-lg border border-line bg-white p-2" />
           ) : (
-            <div className="w-44 h-44 flex items-center justify-center text-ink-soft text-xs">Generating QR...</div>
+            <div className="flex size-44 items-center justify-center text-xs text-ink-soft">Generating QR…</div>
           )}
-          <p className="text-[11px] text-ink-soft text-center mt-1 max-w-sm">
+          <p className="mt-3 max-w-sm text-center text-xs leading-5 text-ink-soft">
             {anchorTxUrl
-              ? <>Scan opens the {anchor?.name ?? 'blockchain'} explorer receipt for the anchoring transaction, where this credential’s hash can be checked against the on-chain record. No profile, emergency contact, or location data is in the QR code.</>
-              : <>Scan opens a verification link with this credential’s cryptographic claim hash. It confirms active status without placing your profile, emergency contacts, or location in the QR code.</>}
+              ? 'Opens the on-chain record of this credential. No personal details are in the code.'
+              : 'Opens a page that confirms this credential is valid. No personal details are in the code.'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-          <Field label="Holder" value={tourist.name} />
-          <Field label="Tourist ID" value={tourist.touristId} mono />
-          <Field label="Nationality" value={tourist.nationality} />
-          <div className="rounded-lg border border-line bg-surface-2 p-3">
-            <span className="mb-1 block text-xs text-ink-soft">
-              Verification
-            </span>
-            <span className="flex items-center gap-1 text-sm font-medium text-emerald-700">
-              <UserCheck className="w-3.5 h-3.5" />
-              {tourist.kycMethod === 'passport' ? 'Passport MRZ' : 'Aadhaar'} verified
-            </span>
-          </div>
-        </div>
+        <dl className="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+          {[
+            ['Holder', tourist.name],
+            ['Tourist ID', tourist.touristId],
+            ['Nationality', tourist.nationality],
+            ['Verified with', tourist.kycMethod === 'passport' ? 'Passport MRZ' : 'Aadhaar'],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-line bg-surface-2 p-3">
+              <dt className="text-xs text-ink-soft">{label}</dt>
+              <dd className={`mt-1 break-words font-medium ${label === 'Tourist ID' ? 'font-mono text-xs' : ''}`}>{value}</dd>
+            </div>
+          ))}
+        </dl>
       )}
 
-      <div className="mt-4 rounded-xl border border-line bg-surface-2 p-4">
-        <div className="flex items-start gap-3">
-          <LockKeyhole className="mt-0.5 shrink-0 text-sky-400" size={19} />
-          <div>
-            <h4 className="font-semibold text-ink">Consent-based identity design</h4>
-            <p className="mt-1 text-xs leading-5 text-ink-soft">
-              The card is for you to show. A scan checks the signed credential and status; full emergency details remain off-chain and are available only to signed-in, authorised staff in an active case workflow.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
-          <p className="rounded-lg border border-line p-2.5 text-ink-soft"><ShieldCheck className="mr-1 inline size-3.5 text-success" />Ed25519-signed credential</p>
-          <p className="rounded-lg border border-line p-2.5 text-ink-soft"><Link2 className="mr-1 inline size-3.5 text-success" />Hash-only chain anchor</p>
-          <p className="rounded-lg border border-line p-2.5 text-ink-soft"><LockKeyhole className="mr-1 inline size-3.5 text-success" />Expiry and revocation checked</p>
-        </div>
-      </div>
+      <p className="mt-4 flex flex-wrap items-center gap-1.5 text-xs text-ink-soft">
+        <Link2 className="size-3.5" />
+        {anchor ? (
+          <>
+            Credential hash anchored on {anchor.name}
+            {anchor.explorer ? (
+              <a href={`${anchor.explorer}${anchorTxHash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-ink underline">{shortTx}</a>
+            ) : (
+              <span className="font-mono">{shortTx}</span>
+            )}
+          </>
+        ) : (
+          'Signed credential. Not anchored on-chain (no registry configured).'
+        )}
+      </p>
     </section>
-  );
-}
-
-function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="rounded-lg border border-line bg-surface-2 p-3">
-      <span className="mb-1 block text-xs text-ink-soft">
-        {label}
-      </span>
-      <span className={`text-sm font-medium text-ink ${mono ? 'font-mono' : ''}`}>{value}</span>
-    </div>
   );
 }

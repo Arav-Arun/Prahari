@@ -1,10 +1,10 @@
-export type ClothingItem = {
+type ClothingItem = {
   item: string;
   color: string;
   details: string;
 };
 
-export type EmergencyClothingProfile = {
+type EmergencyClothingProfile = {
   version: 1;
   source: 'ai_vision' | 'ai_text' | 'manual';
   summary: string;
@@ -119,7 +119,7 @@ export function isEmergencyProfileAiConfigured(): boolean {
   return Boolean(process.env.OPENAI_API_KEY);
 }
 
-export function manualEmergencyClothingProfile(notes: string): EmergencyClothingProfile {
+function manualEmergencyClothingProfile(notes: string): EmergencyClothingProfile {
   return {
     version: 1,
     source: 'manual',

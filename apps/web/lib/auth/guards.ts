@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest, type AuthSession, type UserRole } from './session';
 
-export interface AuthResultSuccess {
+interface AuthResultSuccess {
   session: AuthSession;
   errorResponse: null;
 }
 
-export interface AuthResultFailure {
+interface AuthResultFailure {
   session: null;
   errorResponse: NextResponse;
 }
 
-export type AuthResult = AuthResultSuccess | AuthResultFailure;
+type AuthResult = AuthResultSuccess | AuthResultFailure;
 
 /**
  * Route authorization guard for API routes.

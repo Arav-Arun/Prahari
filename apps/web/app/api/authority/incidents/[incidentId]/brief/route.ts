@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/guards';
-import { listIncidents } from '@/lib/db';
+import { getIncident } from '@/lib/db';
 import { isFixtureIncident } from '@/lib/operationalData';
 import { createIncidentBrief } from '@/lib/services/multilingualCommunication';
 import { isCommunicationLanguageCode } from '@/lib/languages';
@@ -20,7 +20,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
     if (!isCommunicationLanguageCode(outputLanguage)) {
       return NextResponse.json({ success: false, error: 'Choose a supported incident-brief language.' }, { status: 400 });
     }
-    const incident = (await listIncidents(200)).find((item: any) => item.incidentId === incidentId);
+    const incident = await getIncident(incidentId);
     if (!incident) return NextResponse.json({ success: false, error: 'Incident not found.' }, { status: 404 });
     if (isFixtureIncident(incident)) {
       return NextResponse.json({ success: false, error: 'AI briefs are available only for live incident records.' }, { status: 400 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Loader2, MapPinned } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import {
   cacheConfiguredOfflineTiles,
   downloadOfflineMapPack,
@@ -49,17 +49,12 @@ export default function OfflineAreaDownload({ selection }: { selection: OfflineM
   };
 
   return (
-    <section className="rounded-nb border border-sky-500/30 bg-sky-50/60 p-4">
-      <div className="flex items-start gap-3">
-        <MapPinned className="mt-0.5 size-5 text-sky-600" />
-        <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-ink">Download your {selection.radiusKm} km safety map</h3>
-          <p className="mt-1 text-xs leading-5 text-ink-soft">{selection.label || `${selection.lat.toFixed(4)}, ${selection.lng.toFixed(4)}`}. The pack is saved in Prahari and downloaded as a portable backup file.</p>
-        </div>
-      </div>
-      <button type="button" disabled={busy} onClick={download} className="minimal-button minimal-button-primary mt-3 w-full disabled:opacity-60">
+    <section className="rounded-nb border border-line bg-surface p-4">
+      <h3 className="font-bold">Download your {selection.radiusKm} km safety pack</h3>
+      <p className="mt-1 text-xs leading-5 text-ink-soft">{selection.label || `${selection.lat.toFixed(4)}, ${selection.lng.toFixed(4)}`} — nearby services, helplines and guidance, saved on this device and as a backup file.</p>
+      <button type="button" disabled={busy} onClick={download} className="minimal-button minimal-button-primary mt-3 w-full">
         {busy ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-        {busy ? 'Preparing offline area…' : 'Download offline safety map'}
+        {busy ? 'Preparing…' : 'Download safety pack'}
       </button>
       {notice && <p role="status" className="mt-3 text-xs leading-5 text-ink-soft">{notice}</p>}
     </section>

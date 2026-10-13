@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 
-export interface DigitalIdPayload {
+interface DigitalIdPayload {
   touristId: string;
   name: string;
   nationality: string;

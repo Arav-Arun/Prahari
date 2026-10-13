@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isValidSOSPacket, SOSPacket } from "@/lib/sos-mesh/sosPacket";
 import { emitToGateway } from "@/lib/services/gatewayEmit";
-import { listIncidents, updateIncident } from '@/lib/db';
+import { updateIncident, getIncident } from '@/lib/db';
 import { canAccessTouristData, requireAuth } from '@/lib/auth/guards';
 
 // Short-lived cache only; the protected incident record is the durable source.
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "incidentId is required" }, { status: 400 });
     }
 
-    const incident = (await listIncidents(200)).find((item: any) => item.incidentId === incidentId);
+    const incident = await getIncident(incidentId);
     if (!incident) return NextResponse.json({ success: false, error: 'Incident not found.' }, { status: 404 });
     if (!canAccessTouristData(auth.session, incident.touristId)) {
       return NextResponse.json({ success: false, error: 'You are not authorised to read this incident communication.' }, { status: 403 });
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "incidentId required in packet." }, { status: 400 });
     }
 
-    const incident = (await listIncidents(200)).find((item: any) => item.incidentId === incidentId);
+    const incident = await getIncident(incidentId);
     if (!incident) return NextResponse.json({ success: false, error: 'Incident not found.' }, { status: 404 });
     if (!canAccessTouristData(auth.session, incident.touristId)) {
       return NextResponse.json({ success: false, error: 'You are not authorised to send this incident communication.' }, { status: 403 });

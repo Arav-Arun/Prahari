@@ -10,28 +10,28 @@ import {
 const SARVAM_API_URL = 'https://api.sarvam.ai';
 const MAX_TRANSLATION_CHARS = 2_000;
 
-export type TranslationResult = {
+type TranslationResult = {
   translatedText: string;
   sourceLanguage: string;
   targetLanguage: CommunicationLanguageCode;
   provider: 'sarvam_ai' | 'unchanged';
 };
 
-export type TravellerTranslationResult = {
+type TravellerTranslationResult = {
   translatedText: string;
   sourceLanguage: TravellerAssistanceLanguageCode;
   targetLanguage: TravellerAssistanceLanguageCode;
   provider: 'sarvam_ai' | 'openai' | 'unchanged';
 };
 
-export type SpeechSynthesisResult = {
+type SpeechSynthesisResult = {
   audioBase64: string;
   mimeType: 'audio/wav';
   languageCode: CommunicationLanguageCode;
   provider: 'sarvam_ai';
 };
 
-export type IncidentBrief = {
+type IncidentBrief = {
   overview: string;
   priorityActions: string[];
   questionsForTraveller: string[];
@@ -56,7 +56,7 @@ function errorForStatus(status: number) {
   return 'Sarvam AI is temporarily unavailable. The original message remains available.';
 }
 
-export function isSarvamMultilingualConfigured() {
+function isSarvamMultilingualConfigured() {
   return Boolean(apiKey());
 }
 

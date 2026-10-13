@@ -1,6 +1,8 @@
 import * as turf from '@turf/turf';
+import { listResponders } from '@/lib/db';
+import { operationalResponders } from '@/lib/operationalData';
 
-export interface ResponderUnit {
+interface ResponderUnit {
   id: string;
   unitId: string;
   name: string;
@@ -41,4 +43,20 @@ export function findNearestResponder(
     distanceKm: Math.round(minDistanceKm * 100) / 100,
     etaMinutes: estimatedMinutes,
   };
+}
+
+/** Registered responders that are available and report a position. */
+export async function availableResponders(): Promise<ResponderUnit[]> {
+  return operationalResponders(await listResponders())
+    .filter((responder: any) => String(responder.status ?? '').trim().toLowerCase() === 'available')
+    .map((responder: any) => ({
+      id: responder.id ?? responder.responderId,
+      unitId: responder.unitId ?? responder.responderId,
+      name: responder.name ?? responder.responderId ?? 'Unnamed responder',
+      type: responder.type ?? responder.department,
+      phone: responder.phone ?? '',
+      lat: responder.location?.lat,
+      lng: responder.location?.lng,
+    }))
+    .filter((responder) => typeof responder.lat === 'number' && typeof responder.lng === 'number');
 }

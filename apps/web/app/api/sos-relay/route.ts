@@ -1,8 +1,8 @@
+import { newIncidentId } from '@/lib/ids';
 import { NextRequest, NextResponse } from "next/server";
-import { insertIncident, updateIncident, getTourist, listResponders, listIncidents } from "@/lib/db";
+import { insertIncident, updateIncident, getTourist, getIncident } from "@/lib/db";
 import { emitToGateway } from "@/lib/services/gatewayEmit";
-import { findNearestResponder } from "@/lib/services/dispatchEngine";
-import { operationalResponders } from "@/lib/operationalData";
+import { availableResponders, findNearestResponder } from "@/lib/services/dispatchEngine";
 import { isPacketExpired, isValidSOSPacket, type SOSPacket } from "@/lib/sos-mesh/sosPacket";
 import { signedTouristId, verifyRelayedPacket } from "@/lib/sos-mesh/meshTrust";
 import { notifyEmergencyContacts } from "@/lib/services/emergencyNotifications";
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       meshRelayed = true;
     }
 
-    const incidentId = effectivePacket.incidentId ?? `INC-${Math.floor(1000 + Math.random() * 9000)}`;
+    const incidentId = effectivePacket.incidentId ?? newIncidentId();
     const touristId = effectivePacket.touristId;
     const lat = effectivePacket.latitude as number;
     const lng = effectivePacket.longitude as number;
@@ -85,26 +85,12 @@ export async function POST(request: NextRequest) {
       ? 'BLE_RELAY'
       : (['INTERNET', 'PEER_MESH', 'BLE_RELAY', 'SMS', 'LOCAL_QUEUE'] as const).find((known) => known === effectivePacket.lastKnownTransport) ?? 'BLE_RELAY';
 
-    const existing = (await listIncidents(200)).find((incident: any) => incident.incidentId === incidentId);
+    const existing = await getIncident(incidentId);
     if (existing) {
       return NextResponse.json({ success: true, message: 'SOS packet was already recorded.', incident: existing, idempotent: true });
     }
 
-    // Find nearest registered responder unit
-    const candidates = operationalResponders(await listResponders())
-      .filter((responder: any) => String(responder.status ?? '').trim().toLowerCase() === 'available')
-      .map((r: any) => ({
-        id: r.id ?? r.responderId,
-        unitId: r.unitId ?? r.responderId,
-        name: r.name ?? r.responderId ?? 'Unnamed responder',
-        type: r.type ?? r.department,
-        phone: r.phone ?? '',
-        lat: r.location?.lat,
-        lng: r.location?.lng,
-      }))
-      .filter((r: any) => typeof r.lat === 'number' && typeof r.lng === 'number');
-
-    const match = findNearestResponder(lat, lng, candidates);
+    const match = findNearestResponder(lat, lng, await availableResponders());
 
     const incidentRecord = {
       incidentId,
@@ -155,7 +141,11 @@ export async function POST(request: NextRequest) {
 
     // Trigger emergency contact notification if contacts configured
     if (tourist.emergencyContacts && tourist.emergencyContacts.length > 0) {
-      const notificationPlan = await notifyEmergencyContacts(tourist.emergencyContacts, incidentId);
+      const notificationPlan = await notifyEmergencyContacts(tourist.emergencyContacts, incidentId, {
+        kind: 'sos',
+        travellerName: tourist.name,
+        location: { lat, lng },
+      });
       await updateIncident(incidentId, { emergencyContactNotifications: notificationPlan });
     }
 

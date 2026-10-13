@@ -1,6 +1,6 @@
 export type SafetyCoordinates = { lat: number; lng: number };
 
-export type SafetySignalCode =
+type SafetySignalCode =
   | "telemetry_gap"
   | "route_deviation"
   | "unexpected_speed"
@@ -10,14 +10,14 @@ export type SafetySignalCode =
   | "local_incident_density"
   | "official_hazard";
 
-export type SafetySignal = {
+type SafetySignal = {
   code: SafetySignalCode;
   severity: "low" | "medium" | "high" | "critical";
   message: string;
   contribution: number;
 };
 
-export type SafetyAssessment = {
+type SafetyAssessment = {
   score: number;
   level: "low" | "medium" | "high" | "critical";
   requiresHumanReview: boolean;
@@ -89,7 +89,7 @@ function pointToSegmentMeters(point: SafetyCoordinates, start: SafetyCoordinates
   return Math.hypot(x1 + projection * dx, y1 + projection * dy);
 }
 
-export function distanceToRouteMeters(point: SafetyCoordinates, route?: SafetyCoordinates[] | null): number | null {
+function distanceToRouteMeters(point: SafetyCoordinates, route?: SafetyCoordinates[] | null): number | null {
   if (!route || route.length < 2) return null;
   let nearest = Number.POSITIVE_INFINITY;
   for (let index = 0; index < route.length - 1; index += 1) {

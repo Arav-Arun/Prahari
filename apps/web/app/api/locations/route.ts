@@ -1,3 +1,4 @@
+import { newIncidentId } from '@/lib/ids';
 import { NextRequest, NextResponse } from "next/server";
 import { insertLocation, listLocations, listActiveGeofences, insertIncident, listIncidents, getTourist, updateTourist, updateIncident } from "@/lib/db";
 import { checkPointInGeofence, type GeofenceZone } from "@/lib/geospatial";
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
         );
 
         if (!recentBreach) {
-          const incidentId = `INC-GF-${Math.floor(1000 + Math.random() * 9000)}`;
+          const incidentId = newIncidentId('INC-GF');
           const incident = {
             incidentId,
             touristId,
@@ -197,6 +198,7 @@ export async function POST(request: NextRequest) {
           const notificationPlan = await notifyEmergencyContacts(tourist.emergencyContacts, incidentId, {
             kind: 'geofence_breach',
             zoneName: check.breachedZone.name,
+            travellerName: tourist.name,
           });
           const recordedIncident = (await updateIncident(incidentId, { emergencyContactNotifications: notificationPlan })) ?? incident;
           await emitToGateway("incident:create", recordedIncident);
@@ -217,7 +219,7 @@ export async function POST(request: NextRequest) {
             Date.now() - new Date(incident.createdAt).getTime() < 30 * 60 * 1000
         );
         if (!existingReview) {
-          const incidentId = `INC-SAFETY-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+          const incidentId = newIncidentId('INC-SAFETY');
           const incident = {
             incidentId,
             touristId,
@@ -241,7 +243,7 @@ export async function POST(request: NextRequest) {
             }],
           };
           if (!await insertIncident(incident)) throw new Error('Could not record the safety-review incident.');
-          const notificationPlan = await notifyEmergencyContacts(tourist.emergencyContacts, incidentId, { kind: 'safety_review' });
+          const notificationPlan = await notifyEmergencyContacts(tourist.emergencyContacts, incidentId, { kind: 'safety_review', travellerName: tourist.name });
           const recordedIncident = (await updateIncident(incidentId, { emergencyContactNotifications: notificationPlan })) ?? incident;
           await emitToGateway("incident:create", recordedIncident);
           safetyReview = { incidentId };

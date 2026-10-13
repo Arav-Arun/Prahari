@@ -8,7 +8,7 @@
  * subscribe only when their short-lived staff JWT passes the private-channel
  * RLS policy on `realtime.messages`.
  */
-export type RealtimeDeliveryResult = {
+type RealtimeDeliveryResult = {
   attempted: boolean;
   accepted: boolean;
 };

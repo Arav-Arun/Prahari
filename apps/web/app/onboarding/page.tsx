@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle,
   Fingerprint, BookUser, Loader2, KeyRound, FlaskConical, Copy,
-  Camera, Sparkles,
 } from 'lucide-react';
 import OfflineAreaSetup from '@/components/offline/OfflineAreaSetup';
 import OfflineAreaDownload from '@/components/offline/OfflineAreaDownload';
@@ -190,17 +189,16 @@ export default function OnboardingPage() {
     <main className="onboarding-page">
       <section className="onboarding-workspace">
         <header className="onboarding-pane-header">
-          <Link href="/" className="onboarding-brand">Prahari</Link>
+          <Link href="/" className="minimal-brand">Prahari</Link>
           <span>Digital Tourist ID</span>
         </header>
         <div className="onboarding-content">
 
         {step === 'method' && (
-          <div className="onboarding-intro">
-            <p className="minimal-eyebrow">Start your journey</p>
-            <h1 className="ui-display mt-3 text-3xl text-ink">Choose your verification path.</h1>
+          <div>
+            <h1 className="ui-display text-3xl text-ink">Choose how to verify</h1>
             <p className="mt-3 max-w-md text-sm leading-6 text-ink-soft">
-              We only ask for the information needed to create your consent-based Digital Tourist ID.
+              We only ask for what is needed to issue your Digital Tourist ID.
             </p>
           </div>
         )}
@@ -224,16 +222,14 @@ export default function OnboardingPage() {
                 <button
                   key={id}
                   onClick={() => { setMethod(id); setStep('details'); setError(null); }}
-                  className="minimal-card minimal-card-link w-full p-5 text-left"
+                  className="minimal-card minimal-card-link flex w-full items-center gap-3 p-5 text-left"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-10 place-items-center rounded-xl bg-surface-2 text-stone-700"><Icon size={20} /></span>
-                    <span>
-                      <span className="block text-base font-semibold text-ink">{title}</span>
-                      <span className="mt-1 block text-sm text-ink-soft">{sub}</span>
-                    </span>
-                  </div>
-                  <span className="minimal-card-action mt-4 text-sm">Continue <ArrowRight size={15} /></span>
+                  <span className="grid size-10 place-items-center rounded-xl bg-surface-2 text-ink"><Icon size={20} /></span>
+                  <span className="flex-1">
+                    <span className="block text-base font-semibold text-ink">{title}</span>
+                    <span className="mt-1 block text-sm text-ink-soft">{sub}</span>
+                  </span>
+                  <ArrowRight size={16} className="text-ink-soft" />
                 </button>
               ))}
             </div>
@@ -260,7 +256,7 @@ export default function OnboardingPage() {
                     Validated with the Verhoeff checksum. Never stored — only a salted hash is kept.
                   </p>
                   <button type="button" onClick={() => setAadhaar(generateSandboxAadhaar())}
-                    className="mt-2 text-xs font-semibold text-brand-600 underline">
+                    className="mt-2 text-xs font-semibold text-ink underline">
                     Generate a valid sandbox number
                   </button>
                 </div>
@@ -284,7 +280,7 @@ export default function OnboardingPage() {
                   verified against ICAO 9303 — a mistyped line is rejected.
                 </p>
                 <button type="button" onClick={() => { const specimen = buildSandboxMrz(); setMrz1(specimen.line1); setMrz2(specimen.line2); }}
-                  className="text-xs font-semibold text-brand-600 underline">
+                  className="text-xs font-semibold text-ink underline">
                   Generate an ICAO specimen passport
                 </button>
               </>
@@ -308,7 +304,7 @@ export default function OnboardingPage() {
         {step === 'otp' && (
           <form onSubmit={handleOtp} className="onboarding-stage space-y-4">
             <div className="flex items-center gap-3">
-              <KeyRound className="text-brand-600" size={22} />
+              <KeyRound className="text-ink" size={22} />
               <div>
                 <h2 className="font-bold">Enter the OTP</h2>
                 <p className="text-sm text-ink-soft">Sent to the mobile linked with {maskedTarget}</p>
@@ -322,7 +318,7 @@ export default function OnboardingPage() {
                   <span className="mt-0.5 block">No SMS is sent — a licensed provider would deliver this.</span>
                 </div>
                 <button type="button" onClick={() => setOtp(sandboxOtp)}
-                  className="flex items-center gap-1 rounded-nb bg-amber-600 px-2.5 py-1.5 text-xs font-bold text-white">
+                  className="minimal-button minimal-button-secondary min-h-0 px-2.5 py-1.5 text-xs">
                   <Copy size={13} /> Fill
                 </button>
               </div>
@@ -383,22 +379,17 @@ export default function OnboardingPage() {
             </div>
             <p className="text-xs text-ink-soft">Your credential automatically expires when this visit ends. Itinerary details remain off-chain.</p>
 
-            <section className="rounded-nb border-2 border-brand-600/20 bg-brand-50/60 p-4" aria-labelledby="emergency-profile-heading">
-              <div className="flex items-start gap-3">
-                <div className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-600 text-white"><Camera size={18} /></div>
-                <div>
-                  <h2 id="emergency-profile-heading" className="font-bold text-ink">Emergency identification profile <span className="font-normal text-ink-soft">(optional)</span></h2>
-                  <p className="mt-1 text-xs leading-5 text-ink-soft">
-                    Upload a recent full-body photo or describe what you are wearing. AI creates a structured clothing description for authorised emergency and missing-person investigations. Your original photo is not retained.
-                  </p>
-                </div>
-              </div>
+            <section className="rounded-nb border border-line bg-surface p-4" aria-labelledby="emergency-profile-heading">
+              <h2 id="emergency-profile-heading" className="font-bold text-ink">Emergency identification profile <span className="font-normal text-ink-soft">(optional)</span></h2>
+              <p className="mt-1 text-xs leading-5 text-ink-soft">
+                Add a recent full-body photo or describe what you are wearing. It becomes a written description that responders see only during an emergency. The photo itself is not kept.
+              </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className="block text-xs font-semibold text-ink-soft">
                   Current photo
                   <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setClothingPhoto(e.target.files?.[0] ?? null)}
-                    className="mt-1.5 block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-brand-700" />
+                    className="mt-1.5 block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-xs file:font-bold file:text-white" />
                   <span className="mt-1 block font-normal">JPEG, PNG, or WebP · up to 5 MB{clothingPhoto ? ` · ${clothingPhoto.name}` : ''}</span>
                 </label>
                 <label className="block text-xs font-semibold text-ink-soft">
@@ -411,7 +402,7 @@ export default function OnboardingPage() {
 
               {clothingPhoto && (
                 <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-ink-soft">
-                  <input type="checkbox" checked={clothingConsent} onChange={(e) => setClothingConsent(e.target.checked)} className="mt-0.5 size-4 accent-brand-600" />
+                  <input type="checkbox" checked={clothingConsent} onChange={(e) => setClothingConsent(e.target.checked)} className="mt-0.5 size-4 accent-accent" />
                   <span>I consent to this photo being sent to OpenAI to generate my emergency clothing description. The photo itself will not be stored by Prahari.</span>
                 </label>
               )}
@@ -419,9 +410,9 @@ export default function OnboardingPage() {
 
             <OfflineAreaSetup value={offlineMapSelection} onChange={setOfflineMapSelection} />
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-nb border-2 border-line bg-surface-2 p-4">
+            <label className="flex cursor-pointer items-start gap-3 rounded-nb border border-line bg-surface-2 p-4">
               <input type="checkbox" checked={trackingConsent} onChange={(e) => setTrackingConsent(e.target.checked)}
-                className="mt-0.5 size-4 accent-brand-600" />
+                className="mt-0.5 size-4 accent-accent" />
               <span className="text-sm">
                 <strong className="block">Share my location with authorities</strong>
                 <span className="text-ink-soft">
@@ -432,7 +423,7 @@ export default function OnboardingPage() {
             </label>
 
             {requiresRecoveryCode && (
-              <label className="block rounded-nb border-2 border-amber-300 bg-amber-50 p-4 text-sm">
+              <label className="block rounded-nb border border-amber-300 bg-amber-50 p-4 text-sm">
                 <span className="flex items-center gap-2 font-bold text-ink"><KeyRound size={16} /> This document is already enrolled</span>
                 <span className="mt-1.5 block text-xs leading-5 text-ink-soft">
                   Enter the recovery code issued at the original enrolment to update that record.
@@ -494,8 +485,8 @@ export default function OnboardingPage() {
             )}
 
             {issued.clothingProfile && (
-              <div className="rounded-nb border border-brand-600/20 bg-brand-50/60 p-4 text-sm text-ink">
-                <p className="flex items-center gap-2 font-bold"><Sparkles size={16} className="text-brand-600" />Emergency identification profile ready</p>
+              <div className="rounded-nb border border-line bg-surface-2 p-4 text-sm text-ink">
+                <p className="font-bold">Emergency identification profile saved</p>
                 <p className="mt-1.5 leading-6 text-ink-soft">{issued.clothingProfile.summary}</p>
                 <p className="mt-2 text-xs text-ink-soft">Available only to authorised responders during an emergency investigation.</p>
               </div>
@@ -520,9 +511,6 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        <p className="mt-8 flex gap-2 text-xs text-ink-soft">
-          <CheckCircle2 size={15} className="text-success" /> You can revoke consent at any time.
-        </p>
         </div>
 
         {/* This disclosure must remain visible while verification is simulated. */}
@@ -534,7 +522,6 @@ export default function OnboardingPage() {
 
       <aside className="onboarding-visual" role="img" aria-label="A sunlit mountain trail with a safety beacon">
         <div className="onboarding-visual-copy">
-          <p>Prahari safety network</p>
           <h1>A safer path begins before you arrive.</h1>
         </div>
       </aside>

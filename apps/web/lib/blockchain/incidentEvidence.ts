@@ -1,43 +1,19 @@
 import { ethers } from 'ethers';
+import { canReadRegistry, canWriteRegistry, chainId, connectRegistry, registryAddress } from './chain';
 
 const ABI = [
   'function anchorIncident(bytes32 incidentIdKey, bytes32 incidentHash, bytes32 locationHash) external',
   'function verifyIncidentHash(bytes32 incidentIdKey, bytes32 computedHash) external view returns (bool isValid, uint8 status, uint256 timestamp, bool isAudited)',
 ];
 
-const DEPLOYER_KEY = process.env.DEPLOYER_PRIVATE_KEY;
-const USE_SEPOLIA_DEPLOYER = Boolean(DEPLOYER_KEY && process.env.ALCHEMY_SEPOLIA_URL);
-const RPC = USE_SEPOLIA_DEPLOYER
-  ? process.env.ALCHEMY_SEPOLIA_URL
-  : process.env.CHAIN_RPC_URL;
-const ADDRESS = USE_SEPOLIA_DEPLOYER
-  ? process.env.SEPOLIA_INCIDENT_REGISTRY_ADDRESS
-  : process.env.INCIDENT_REGISTRY_ADDRESS;
-const KEY = DEPLOYER_KEY ?? process.env.ANCHOR_PRIVATE_KEY;
-const EXPECTED_CHAIN_ID = USE_SEPOLIA_DEPLOYER ? 11_155_111 : Number(process.env.CHAIN_ID ?? 31_337);
-export const incidentRegistryNetwork = USE_SEPOLIA_DEPLOYER ? 'sepolia' : 'local';
-export const incidentRegistryChainId = EXPECTED_CHAIN_ID;
-
-export const isIncidentChainConfigured = Boolean(RPC && ADDRESS && KEY);
-export const isIncidentChainReadable = Boolean(RPC && ADDRESS);
-
-export type EvidenceAnchor = {
-  payloadHash: string;
-  incidentKey: string;
-  locationHash: string;
-  txHash: string;
-  blockNumber: number;
-  chainId: number;
-  anchoredAt: string;
-  alreadyAnchored?: boolean;
-};
+const ADDRESS = registryAddress.incident;
 
 /**
  * Derives a stable, privacy-safe commitment. It intentionally excludes names,
  * contact data, full GPS coordinates, raw witness statements, and attachments.
  * Only the hashes and a coarse (~1 km) location grid reach the public ledger.
  */
-export function createEfirCommitment(incidentId: string, efir: Record<string, any>) {
+function createEfirCommitment(incidentId: string, efir: Record<string, any>) {
   const digest = (value: unknown) => ethers.keccak256(ethers.toUtf8Bytes(String(value ?? '')));
   const canonical = JSON.stringify({
     version: 1,
@@ -60,35 +36,22 @@ export function createEfirCommitment(incidentId: string, efir: Record<string, an
   };
 }
 
-export async function anchorEfirEvidence(incidentId: string, efir: Record<string, any>): Promise<EvidenceAnchor | null> {
-  if (!isIncidentChainConfigured) return null;
+export async function anchorEfirEvidence(incidentId: string, efir: Record<string, any>) {
+  if (!canWriteRegistry(ADDRESS)) return null;
   try {
-    const provider = new ethers.JsonRpcProvider(RPC);
-    const wallet = new ethers.Wallet(KEY as string, provider);
-    const contract = new ethers.Contract(ADDRESS as string, ABI, wallet);
+    const contract = await connectRegistry(ADDRESS as string, ABI, true);
     const commitment = createEfirCommitment(incidentId, efir);
-    const network = await provider.getNetwork();
-    if (Number(network.chainId) !== EXPECTED_CHAIN_ID) {
-      throw new Error(`Incident registry network mismatch: expected ${EXPECTED_CHAIN_ID}, received ${network.chainId}.`);
-    }
+    const anchoredAt = new Date().toISOString();
 
     const [alreadyMatches] = await contract.verifyIncidentHash(commitment.incidentKey, commitment.payloadHash);
-    if (alreadyMatches) {
-      return { ...commitment, txHash: '', blockNumber: 0, chainId: Number(network.chainId), anchoredAt: new Date().toISOString(), alreadyAnchored: true };
-    }
+    if (alreadyMatches) return { ...commitment, txHash: '', blockNumber: 0, chainId, anchoredAt, alreadyAnchored: true };
 
     const tx = await contract.anchorIncident(commitment.incidentKey, commitment.payloadHash, commitment.locationHash);
     const receipt = await tx.wait();
-    return {
-      ...commitment,
-      txHash: tx.hash,
-      blockNumber: receipt?.blockNumber ?? 0,
-      chainId: Number(network.chainId),
-      anchoredAt: new Date().toISOString(),
-    };
+    return { ...commitment, txHash: tx.hash as string, blockNumber: receipt?.blockNumber ?? 0, chainId, anchoredAt };
   } catch (error: any) {
-    // A rejected transaction must not block a human officer's decision. The
-    // off-chain record keeps an explicit pending state for retry/reconciliation.
+    // A rejected transaction must not block an officer's decision; the record
+    // keeps a pending state so anchoring can be retried.
     console.warn('[prahari] anchorEfirEvidence:', error?.message ?? error);
     return null;
   }
@@ -96,15 +59,10 @@ export async function anchorEfirEvidence(incidentId: string, efir: Record<string
 
 export async function verifyEfirEvidence(incidentId: string, efir: Record<string, any>) {
   const commitment = createEfirCommitment(incidentId, efir);
-  if (!isIncidentChainReadable) return { configured: false, anchored: false, matches: false, commitment };
+  if (!canReadRegistry(ADDRESS)) return { configured: false, anchored: false, matches: false, commitment };
   try {
-    const provider = new ethers.JsonRpcProvider(RPC);
-    const contract = new ethers.Contract(ADDRESS as string, ABI, provider);
+    const contract = await connectRegistry(ADDRESS as string, ABI);
     const [matches, status, timestamp, audited] = await contract.verifyIncidentHash(commitment.incidentKey, commitment.payloadHash);
-    const network = await provider.getNetwork();
-    if (Number(network.chainId) !== EXPECTED_CHAIN_ID) {
-      throw new Error(`Incident registry network mismatch: expected ${EXPECTED_CHAIN_ID}, received ${network.chainId}.`);
-    }
     return {
       configured: true,
       anchored: Number(timestamp) > 0,
@@ -112,7 +70,7 @@ export async function verifyEfirEvidence(incidentId: string, efir: Record<string
       status: Number(status),
       timestamp: Number(timestamp),
       audited: Boolean(audited),
-      chainId: Number(network.chainId),
+      chainId,
       commitment,
     };
   } catch (error: any) {

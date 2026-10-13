@@ -1,17 +1,11 @@
-'use client';
-
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, ArrowRight } from 'lucide-react';
-
-import HeaderNav from '@/components/HeaderNav';
+import { ArrowRight } from 'lucide-react';
 
 /* Photographic props framing the page corners — traveller kit down the left,
-   authority kit down the right. Decorative only; the centre column stays clear.
-   Sizes are tuned per-asset because these are tight cutouts with almost no
-   padding in frame, unlike the illustrations they replaced. */
+   authority kit down the right. Decorative only; the centre column stays clear. */
 const ART = [
-  { src: '/hero/map-india.jpeg', className: 'art-map', w: 1103, h: 857 },
+  { src: '/hero/map-india.webp', className: 'art-map', w: 1103, h: 857 },
   { src: '/hero/backpack.webp', className: 'art-backpack', w: 558, h: 549 },
   { src: '/hero/passport.webp', className: 'art-passport', w: 236, h: 335 },
   { src: '/hero/classified.webp', className: 'art-classified', w: 487, h: 598 },
@@ -28,9 +22,15 @@ export default function Home() {
         ))}
       </div>
 
-      <HeaderNav />
+      <nav className="landing-nav" aria-label="Main">
+        <Link href="/" className="landing-brand">Prahari</Link>
+        <div className="landing-nav-links">
+          <Link href="/login">Sign in</Link>
+          <Link href="/onboarding" className="landing-nav-cta">Create tourist ID</Link>
+        </div>
+      </nav>
 
-      <main id="top" className="landing-main">
+      <main className="landing-main">
         <section className="landing-hero">
           <h1 className="landing-title">
             Travel with a <strong>verified ID.</strong>
@@ -43,42 +43,41 @@ export default function Home() {
           </p>
         </section>
 
-        <section id="roles" className="landing-roles" aria-label="Choose your portal">
-          <article className="role-card role-card-traveller">
-            <h2>For travellers.</h2>
+        <section className="landing-roles" aria-label="Choose your portal">
+          <article className="role-card">
+            <h2>For travellers</h2>
             <p>
-              Create a digital tourist ID, keep emergency contacts on file, and reach help
-              without exposing more location data than necessary.
+              Get a digital tourist ID, keep emergency contacts on file, and send an SOS
+              with your location when you need help.
             </p>
             <div className="role-actions">
               <Link href="/onboarding" className="role-btn-primary">
-                Create tourist ID <ArrowUpRight size={16} />
+                Create tourist ID <ArrowRight size={16} />
               </Link>
               <Link href="/login?role=tourist" className="role-btn-secondary">
-                Log in as traveller <ArrowRight size={16} />
+                Traveller sign in <ArrowRight size={16} />
               </Link>
             </div>
           </article>
 
-          <div className="divider-or" aria-hidden="true"><span>OR</span></div>
-
-          <article className="role-card role-card-authority">
-            <h2>For authorised staff.</h2>
+          <article className="role-card">
+            <h2>For authorised staff</h2>
             <p>
-              Review live incidents, safety signals, geofences, and verified traveller
-              credentials from one operational desk.
+              Review live incidents, publish geofences, and verify traveller credentials
+              from one operations desk.
             </p>
             <div className="role-actions">
-              <Link href="/authority" className="role-btn-primary">
-                Open authority desk <ArrowUpRight size={16} />
-              </Link>
-              <Link href="/login?role=staff" className="role-btn-secondary">
-                Log in as authority <ArrowRight size={16} />
+              <Link href="/login?role=staff" className="role-btn-primary">
+                Open the authority desk <ArrowRight size={16} />
               </Link>
             </div>
           </article>
         </section>
       </main>
+
+      <footer className="landing-footer">
+        Prototype — not a government emergency service. In an emergency, call <a href="tel:112">112</a>.
+      </footer>
     </div>
   );
 }

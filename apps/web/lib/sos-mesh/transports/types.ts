@@ -10,7 +10,7 @@ import { SOSPacket } from '../sosPacket';
  * gateway. They are different links with different trust stories, so they are
  * never reported under one name.
  */
-export type TransportChannel = 'INTERNET' | 'PEER_MESH' | 'BLE_RELAY' | 'LOCAL_QUEUE' | 'ACOUSTIC_ULTRASONIC';
+export type TransportChannel = 'INTERNET' | 'PEER_MESH' | 'BLE_RELAY' | 'LOCAL_QUEUE';
 
 export interface TransportResult {
   success: boolean;

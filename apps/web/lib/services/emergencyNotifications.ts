@@ -1,7 +1,7 @@
-export type EmergencyContact = { name?: string; phone?: string; email?: string; relationship?: string };
+type EmergencyContact = { name?: string; phone?: string; email?: string; relationship?: string };
 type DeliveryState = 'ACCEPTED' | 'FAILED' | 'NOT_CONFIGURED' | 'SKIPPED';
 
-export type EmergencyNotificationPlan = {
+type EmergencyNotificationPlan = {
   status: 'ACCEPTED' | 'PARTIAL' | 'FAILED' | 'NOT_CONFIGURED' | 'NO_CONTACTS' | 'NO_EMAIL_CONTACTS';
   createdAt: string;
   contacts: Array<{
@@ -18,30 +18,25 @@ export type EmergencyNotificationPlan = {
   message: string;
 };
 
-export type EmergencyAlertContext = {
-  /** Human-readable classification only; never include raw GPS or PII. */
+type EmergencyAlertContext = {
   kind?: 'sos' | 'geofence_breach' | 'safety_review';
   zoneName?: string;
+  travellerName?: string;
+  /** Shared only for an SOS, which is the traveller's own request for help. */
+  location?: { lat: number; lng: number };
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/**
- * Resend only accepts mail for the address that owns the account while the
- * shared sandbox sender (onboarding@resend.dev) or an unverified domain is in
- * use, so every alert is routed to this single verified inbox instead of the
- * contact's own address. Override with EMERGENCY_ALERT_RECIPIENT, or set that
- * variable to an empty string once a sending domain is verified to deliver to
- * each contact directly.
- */
-const DEFAULT_ALERT_RECIPIENT = 'aravarun8@gmail.com';
-
 const resendConfigured = () => Boolean(process.env.RESEND_API_KEY && process.env.EMERGENCY_FROM_EMAIL);
 
-/** The verified inbox every alert is redirected to, or null to deliver per contact. */
+/**
+ * Resend's sandbox sender only delivers to the account owner's own inbox. Set
+ * EMERGENCY_ALERT_RECIPIENT to that inbox while testing; leave it unset to
+ * deliver to each contact once a sending domain is verified.
+ */
 function alertRecipientOverride(): string | null {
-  const configured = process.env.EMERGENCY_ALERT_RECIPIENT;
-  const recipient = (configured === undefined ? DEFAULT_ALERT_RECIPIENT : configured).trim().toLowerCase();
+  const recipient = (process.env.EMERGENCY_ALERT_RECIPIENT ?? '').trim().toLowerCase();
   return EMAIL_PATTERN.test(recipient) ? recipient : null;
 }
 
@@ -98,20 +93,23 @@ export async function notifyEmergencyContacts(
   if (!resendConfigured()) return { status: 'NOT_CONFIGURED', createdAt: new Date().toISOString(), contacts: [], message: 'No emergency email provider is configured, so contacts were not notified.' };
 
   const override = alertRecipientOverride();
+  const traveller = context.travellerName || 'The traveller';
+  const mapLink = context.location
+    ? `\n\nLast known location: https://www.google.com/maps?q=${context.location.lat.toFixed(5)},${context.location.lng.toFixed(5)}`
+    : '';
   const message = context.kind === 'geofence_breach'
-    ? `Prahari safety alert ${incidentId}: the traveller entered ${context.zoneName || 'a configured safety zone'} and an authority review record was created. This is not confirmation of distress. Please try to contact the traveller; call local emergency services if you have an immediate concern.`
+    ? `Prahari safety alert ${incidentId}: ${traveller} entered ${context.zoneName || 'a marked risk zone'} and the authority desk was asked to review it. This is not confirmation of distress. Please try to contact them, and call local emergency services if you are worried.`
     : context.kind === 'safety_review'
-      ? `Prahari safety alert ${incidentId}: safety signals require authorised review. This is not confirmation of distress. Please try to contact the traveller; call local emergency services if you have an immediate concern.`
-      : `Prahari emergency alert ${incidentId}: the traveller has requested assistance. Please contact local emergency services if you cannot reach them.`;
+      ? `Prahari safety alert ${incidentId}: ${traveller}'s safety signals were flagged for review by the authority desk. This is not confirmation of distress. Please try to contact them, and call local emergency services if you are worried.`
+      : `Prahari emergency alert ${incidentId}: ${traveller} pressed SOS and asked for help. The authority desk has the alert. Please try to reach them now; in India, call 112 if you cannot.${mapLink}`;
 
   const results = await Promise.all(emailContacts.map(async (contact) => {
     const deliveredTo = override ?? contact.email;
     const name = contact.name || 'Unnamed contact';
     const relationship = contact.relationship || 'Emergency contact';
-    // When alerts are redirected to one verified inbox, the body must still say
-    // who the alert was meant for, or the recipient cannot act on it.
+    // A redirected test alert still says who it was meant for.
     const body = override && override !== contact.email
-      ? `${message}\n\nIntended emergency contact: ${name} (${relationship}) <${contact.email}>. This alert was routed to the verified Prahari notification inbox because the configured sending domain cannot yet deliver to that address.`
+      ? `${message}\n\nIntended for: ${name} (${relationship}) <${contact.email}>.`
       : message;
     const { state, failureReason } = await sendEmail(deliveredTo, body);
     return { name, relationship, email: contact.email, deliveredTo, emailDelivery: state, ...(failureReason ? { failureReason } : {}) };

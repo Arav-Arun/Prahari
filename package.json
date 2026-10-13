@@ -15,7 +15,8 @@
     "contract:deploy:sepolia": "pnpm --filter @prahari/contracts deploy:sepolia",
     "identity:keygen": "node scripts/generate-identity-key.mjs",
     "mesh:demo": "pnpm --filter @prahari/web mesh:demo",
-    "test": "pnpm --filter @prahari/web test"
+    "test": "pnpm --filter @prahari/web test",
+    "staff:create": "node scripts/create-staff-user.mjs"
   },
   "packageManager": "pnpm@11.19.0"
 }

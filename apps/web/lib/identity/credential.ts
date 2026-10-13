@@ -16,7 +16,7 @@ let cachedKeys: { privateKey: KeyObject; publicKey: KeyObject } | null = null;
  * ephemeral key is generated so local dev works — but credentials signed with
  * it stop verifying when the process restarts, which is logged loudly.
  */
-export function getIssuerKeys() {
+function getIssuerKeys() {
   if (cachedKeys) return cachedKeys;
 
   const encoded = process.env.IDENTITY_SIGNING_KEY;
@@ -36,12 +36,12 @@ export function getIssuerKeys() {
 }
 
 /** Raw 32-byte Ed25519 public key, base58 — used in the DID document. */
-export function getIssuerPublicKeyB58(): string {
+function getIssuerPublicKeyB58(): string {
   const der = getIssuerKeys().publicKey.export({ type: 'spki', format: 'der' }) as Buffer;
   return base58(der.subarray(der.length - 32)); // strip the 12-byte SPKI prefix
 }
 
-export interface VerifiableCredential {
+interface VerifiableCredential {
   '@context': string[];
   id: string;
   type: string[];
@@ -67,12 +67,12 @@ function canonicalise(value: unknown): string {
 }
 
 /** keccak256-compatible digest of the unsigned credential. Block 3 anchors this. */
-export function computeCredentialHash(vc: VerifiableCredential): string {
+function computeCredentialHash(vc: VerifiableCredential): string {
   const { proof, ...unsigned } = vc;
   return '0x' + createHash('sha256').update(canonicalise(unsigned)).digest('hex');
 }
 
-export interface IssuedIdentity {
+interface IssuedIdentity {
   did: string;
   didDocument: ReturnType<typeof buildDidDocument>;
   credential: VerifiableCredential;
@@ -80,7 +80,7 @@ export interface IssuedIdentity {
   expiresAt: string;
 }
 
-export type CredentialIssueOptions = {
+type CredentialIssueOptions = {
   /** Trip end supplied during onboarding; the credential is never valid past it. */
   expiresAt?: string;
 };

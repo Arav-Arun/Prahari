@@ -1,5 +1,4 @@
-import { identityRegistryChainId, identityRegistryNetwork, isChainConfigured, isChainReadable } from '@/lib/blockchain/registry';
-import { incidentRegistryChainId, incidentRegistryNetwork, isIncidentChainConfigured, isIncidentChainReadable } from '@/lib/blockchain/incidentEvidence';
+import { canReadRegistry, canWriteRegistry, chainId, chainNetwork, registryAddress } from '@/lib/blockchain/chain';
 import { notificationProviderStatus } from '@/lib/services/emergencyNotifications';
 import { isEmergencyProfileAiConfigured } from '@/lib/services/emergencyClothingProfile';
 import { indiaHazardProviderStatus } from '@/lib/services/indiaHazards';
@@ -14,19 +13,17 @@ export async function GET() {
     status: database.ready ? 'ok' : 'degraded', service: 'prahari-web', timestamp: new Date().toISOString(),
     database,
     web3: {
-      identity: { readable: isChainReadable, writableByServer: isChainConfigured, network: identityRegistryNetwork, expectedChainId: identityRegistryChainId },
-      incidentEvidence: { readable: isIncidentChainReadable, writableByServer: isIncidentChainConfigured, network: incidentRegistryNetwork, expectedChainId: incidentRegistryChainId },
-      walletMode: 'server-custodied',
+      network: chainNetwork,
+      expectedChainId: chainId,
+      identity: { readable: canReadRegistry(registryAddress.identity), writableByServer: canWriteRegistry(registryAddress.identity) },
+      incidentEvidence: { readable: canReadRegistry(registryAddress.incident), writableByServer: canWriteRegistry(registryAddress.incident) },
     },
     providers: {
       notifications: notificationProviderStatus(),
       emergencyIdentificationProfile: { openAiConfigured: isEmergencyProfileAiConfigured() },
       indiaHazards: indiaHazardProviderStatus(),
       multilingualCommunication: sarvamMultilingualProviderStatus(),
-      offlineBleRelay: {
-        gatewayUplinkConfigured: Boolean(process.env.PRAHARI_MESH_GATEWAY_KEY),
-        browserRole: 'GATT client only; requires a separately provisioned native or hardware gateway',
-      },
+      bleGatewayUplinkConfigured: Boolean(process.env.PRAHARI_MESH_GATEWAY_KEY),
     },
   });
 }

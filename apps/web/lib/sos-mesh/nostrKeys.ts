@@ -15,7 +15,7 @@ import { bytesToHex, hexToBytes, randomBytes } from '@noble/hashes/utils';
 
 const SECRET_STORAGE_KEY = 'prahari_mesh_secret_v1';
 
-export interface DeviceKeyPair {
+interface DeviceKeyPair {
   /** 32-byte secret, hex. Never transmitted. */
   secretHex: string;
   /** 32-byte BIP-340 x-only public key, hex. This is the Nostr pubkey. */
@@ -44,7 +44,7 @@ function readStoredSecret(): string | null {
  * Returns this device's mesh identity, creating and persisting one on first
  * use. Returns null on the server, where there is no device to speak for.
  */
-export function getDeviceKeyPair(): DeviceKeyPair | null {
+function getDeviceKeyPair(): DeviceKeyPair | null {
   // The cache is consulted before the environment check so a test or a native
   // shell can install a known identity outside a browser.
   if (cachedKeyPair) return cachedKeyPair;

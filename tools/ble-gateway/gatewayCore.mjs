@@ -1,6 +1,6 @@
 /**
  * Pure, hardware-independent portions of the Prahari BLE relay gateway.
- * The wire format is documented in docs/ble-relay-gateway-protocol.md.
+ * The wire format is documented in README.md.
  */
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';

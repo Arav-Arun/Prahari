@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { LocateFixed, MapPinned } from 'lucide-react';
+import { LocateFixed } from 'lucide-react';
 import type { OfflineMapSelection } from '@/lib/offlineMap';
 
 const OfflineLocationPickerMap = dynamic(() => import('./OfflineLocationPickerMap'), { ssr: false });
@@ -28,14 +28,9 @@ export default function OfflineAreaSetup({ value, onChange }: Props) {
   };
 
   return (
-    <section className="rounded-nb border-2 border-sky-500/20 bg-sky-50/60 p-4" aria-labelledby="offline-map-heading">
-      <div className="flex items-start gap-3">
-        <div className="grid size-9 shrink-0 place-items-center rounded-full bg-sky-600 text-white"><MapPinned size={18} /></div>
-        <div>
-          <h2 id="offline-map-heading" className="font-bold text-ink">Offline regional safety map <span className="font-normal text-ink-soft">(optional)</span></h2>
-          <p className="mt-1 text-xs leading-5 text-ink-soft">Choose your current location or tap a custom location on the map. After your ID is issued, Prahari will download an offline area pack with tourist places, emergency services, helplines, and safety guidance.</p>
-        </div>
-      </div>
+    <section className="rounded-nb border border-line bg-surface p-4" aria-labelledby="offline-map-heading">
+      <h2 id="offline-map-heading" className="font-bold text-ink">Offline safety pack <span className="font-normal text-ink-soft">(optional)</span></h2>
+      <p className="mt-1 text-xs leading-5 text-ink-soft">Pick an area. After your ID is issued you can download nearby services, helplines and safety guidance for use without a connection.</p>
 
       <div className="mt-4 flex flex-wrap gap-2">
         <button type="button" onClick={useCurrentLocation} className="minimal-button minimal-button-secondary px-3 py-2 text-xs">
@@ -45,7 +40,7 @@ export default function OfflineAreaSetup({ value, onChange }: Props) {
       </div>
 
       <OfflineLocationPickerMap value={value ? { lat: value.lat, lng: value.lng } : null} onPick={({ lat, lng }) => setCoordinates(lat, lng, 'Custom selected area')} />
-      <p className="mt-1.5 text-xs text-ink-soft">Tap the map to choose a custom location. Selecting a point only prepares the download; it does not enable live tracking.</p>
+      <p className="mt-1.5 text-xs text-ink-soft">Tap the map to choose a point. This does not turn on location tracking.</p>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_8rem]">
         <input
@@ -65,8 +60,7 @@ export default function OfflineAreaSetup({ value, onChange }: Props) {
       <label className="mt-3 block text-xs font-semibold text-ink-soft">Coverage radius: <span className="text-ink">{value?.radiusKm ?? DEFAULT_RADIUS_KM} km</span>
         <input type="range" min="2" max="25" step="1" value={value?.radiusKm ?? DEFAULT_RADIUS_KM} disabled={!value}
           onChange={(event) => value && onChange({ ...value, radiusKm: Number(event.target.value) })}
-          className="mt-1.5 block w-full accent-sky-600 disabled:opacity-50" />
-        <span className="mt-1 block font-normal">Choose any radius from 2 to 25 km. Smaller areas download faster and work better on limited storage.</span>
+          className="mt-1.5 block w-full accent-accent disabled:opacity-50" />
       </label>
     </section>
   );

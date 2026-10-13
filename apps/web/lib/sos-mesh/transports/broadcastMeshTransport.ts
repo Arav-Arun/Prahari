@@ -1,15 +1,8 @@
 /**
- * BitChat Zero-Trust Broadcast & Local Network Radio-Less Mesh Transport
- *
- * Enables zero-touch offline SOS packet propagation across nearby devices,
- * local Wi-Fi networks, browser contexts, and peer nodes.
- *
- * When a victim's phone is offline (no internet / no cellular data), this
- * transport frames the SOS into a 287-byte Nostr BIP-340 signed binary packet
- * and broadcasts it across local network channels.
- *
- * Any nearby device receiving the broadcast validates the Schnorr signature
- * and, if online, relays it directly to Police HQ (/api/sos-relay).
+ * Same-browser relay. An SOS raised in one Prahari tab is announced to other
+ * Prahari tabs in this browser (BroadcastChannel and a storage event), and any
+ * tab that is online verifies the signature and uploads it to /api/sos-relay.
+ * It cannot reach another device; the WebRTC transport does that.
  */
 
 import { SOSTransport, TransportResult } from './types';
@@ -104,7 +97,7 @@ export function startMeshBroadcastListener(onRelaySuccess?: (packet: SOSPacket) 
         }).catch(() => null);
 
         if (relayResponse?.ok) {
-          console.info(`[BitChat Mesh] Successfully relayed ${packet.incidentId} to Police HQ over Wi-Fi/Local Mesh!`);
+          console.info(`[BitChat Mesh] Relayed ${packet.incidentId} to the authority desk.`);
           onRelaySuccess?.(packet);
           return;
         }
@@ -148,7 +141,7 @@ export function startMeshBroadcastListener(onRelaySuccess?: (packet: SOSPacket) 
   };
 }
 
-export class BroadcastMeshTransport implements SOSTransport {
+class BroadcastMeshTransport implements SOSTransport {
   public readonly name = 'PEER_MESH';
 
   public async isAvailable(): Promise<boolean> {
@@ -178,7 +171,7 @@ export class BroadcastMeshTransport implements SOSTransport {
       return {
         success: true,
         channel: 'PEER_MESH',
-        message: 'SOS broadcast across local Wi-Fi network & peer mesh. Nearby devices with internet will relay to Police HQ.',
+        message: 'SOS shared with other Prahari tabs in this browser.',
         incidentId: packet.incidentId,
         transmittedAt: Date.now(),
       };

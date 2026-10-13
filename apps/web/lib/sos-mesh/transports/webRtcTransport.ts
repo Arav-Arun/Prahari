@@ -81,7 +81,7 @@ function waitForIceGathering(pc: RTCPeerConnection, timeoutMs = ICE_GATHERING_TI
   });
 }
 
-export class WebRtcTransport implements SOSTransport {
+class WebRtcTransport implements SOSTransport {
   public readonly name = 'PEER_MESH' as const;
   private peerConnections: Map<string, RTCPeerConnection> = new Map();
   private dataChannels: Map<string, RTCDataChannel> = new Map();

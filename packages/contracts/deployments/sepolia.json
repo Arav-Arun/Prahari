@@ -4,8 +4,6 @@
   "deployer": "0xB8a7aA709c393f2318f7F20336399C1020745473",
   "addresses": {
     "IncidentRegistry": "0xC75cF5C5B0a071F43fD389a3c667c529AEFdfeA9",
-    "TouristIdentityRegistry": "0x763Ae697425D4baDD7FB665796c5745e4E9d82aF",
-    "GeofenceRegistry": "0x5faDFCc59BBAd5d218772BeaF6921d60077aaFda",
-    "ResponderRegistry": "0x087676f0C6069114DC8C28C5720b9F3b28CF2b8a"
+    "TouristIdentityRegistry": "0x763Ae697425D4baDD7FB665796c5745e4E9d82aF"
   }
 }

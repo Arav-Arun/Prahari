@@ -4,7 +4,7 @@ const ITERATIONS = 100000;
 const KEYLEN = 64;
 const DIGEST = 'sha512';
 
-export interface HashResult {
+interface HashResult {
   hash: string;
   salt: string;
 }

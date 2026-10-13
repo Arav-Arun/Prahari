@@ -27,17 +27,16 @@ function getSecretKey(): string {
     process.env.IDENTITY_SIGNING_KEY ||
     process.env.KYC_HASH_SALT;
 
-  if (!secret) {
-    if (!warnedDefaultSecret) {
-      warnedDefaultSecret = true;
-      console.warn(
-        '[prahari] SECURITY: no SESSION_SECRET / IDENTITY_SIGNING_KEY / KYC_HASH_SALT set — ' +
-          'session tokens are signed with a public default key and are forgeable. Set SESSION_SECRET.'
-      );
-    }
-    return 'prahari-default-session-hmac-secret-salt-2026';
+  if (secret) return secret;
+  // A key that ships with the code would let anyone forge a staff session.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('SESSION_SECRET must be set in production.');
   }
-  return secret;
+  if (!warnedDefaultSecret) {
+    warnedDefaultSecret = true;
+    console.warn('[prahari] SESSION_SECRET is not set; using a development-only key.');
+  }
+  return 'prahari-development-session-key';
 }
 
 function base64UrlEncode(str: string): string {

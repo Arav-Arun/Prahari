@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Languages, MessageSquare, Send, Wifi, WifiOff, CheckCircle2 } from 'lucide-react';
+import { Send, Wifi, WifiOff } from 'lucide-react';
 import { createChatPacket, SOSPacket } from '@/lib/sos-mesh/sosPacket';
 import { saveChatMessage, getChatMessagesForIncident } from '@/lib/sos-mesh/indexedDbQueue';
 import { COMMUNICATION_LANGUAGES, languageLabel } from '@/lib/languages';
@@ -131,52 +131,33 @@ export default function OfflineEmergencyChat({
   };
 
   return (
-    <div className="rounded-xl border border-line bg-surface-2 p-4 text-ink">
-      <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
-        <h3 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-ink">
-          <MessageSquare className="size-4 text-sky-400" /> Emergency messages
-        </h3>
-        <span className="flex items-center gap-1 rounded-full bg-surface border border-line px-2.5 py-0.5 font-mono text-xs font-medium text-sky-300">
-          {isOnline ? <Wifi className="size-3 text-emerald-400" /> : <WifiOff className="size-3 text-amber-400" />}
-          {isOnline ? 'Connected to command server' : 'Stored locally — awaiting connection'}
+    <div className="rounded-xl border border-line bg-surface p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">Messages with the authority desk</h3>
+        <span className="flex items-center gap-1 text-xs text-ink-soft">
+          {isOnline ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5 text-warning" />}
+          {isOnline ? 'Online' : 'Offline — messages will send later'}
         </span>
       </div>
 
-      {/* Message History Container */}
-      <div className="max-h-56 min-h-[120px] overflow-y-auto rounded-lg border border-line bg-surface p-3 space-y-2.5">
+      <div className="mt-3 max-h-56 min-h-[100px] space-y-3 overflow-y-auto rounded-lg bg-surface-2 p-3">
         {messages.length === 0 ? (
-          <p className="py-4 text-center text-xs text-ink-soft">
-            No messages sent yet. Online messages are delivered to the authorised command team; offline messages stay on this device until it reconnects.
-          </p>
+          <p className="py-4 text-center text-xs text-ink-soft">No messages yet.</p>
         ) : (
           messages.map((msg) => {
             const isTourist = msg.senderRole === 'tourist';
             return (
-              <div
-                key={msg.packetId}
-                className={`flex flex-col ${isTourist ? 'items-end' : 'items-start'}`}
-              >
-                <div className="mb-0.5 flex items-center gap-1.5 text-[10px] text-ink-soft">
-                  <span className="font-semibold text-ink">{msg.senderName || (isTourist ? 'You' : 'Police HQ')}</span>
-                  <span>•</span>
-                  <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
-                    isTourist
-                      ? 'bg-sky-700 text-white rounded-br-none font-medium shadow-sm'
-                      : 'bg-emerald-50 border border-emerald-200 text-emerald-950 rounded-bl-none font-medium shadow-sm'
-                  }`}
-                >
+              <div key={msg.packetId} className={`flex flex-col ${isTourist ? 'items-end' : 'items-start'}`}>
+                <span className="mb-0.5 text-[10px] text-ink-soft">
+                  {isTourist ? 'You' : msg.senderName || 'Authority desk'} · {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {isTourist && msg.lastKnownTransport !== 'INTERNET' ? ' · pending' : ''}
+                </span>
+                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed ${isTourist ? 'bg-ink text-white' : 'border border-line bg-surface'}`}>
                   {msg.chatText}
                 </div>
                 {msg.senderRole === 'authority' && msg.originalText && (
-                  <p className="mt-1 max-w-[85%] text-[10px] leading-4 text-ink-soft">Official original ({languageLabel(msg.originalLanguage)}): {msg.originalText}</p>
+                  <p className="mt-1 max-w-[85%] text-[10px] leading-4 text-ink-soft">Original ({languageLabel(msg.originalLanguage)}): {msg.originalText}</p>
                 )}
-                <div className="mt-0.5 flex items-center gap-1 text-[9px] text-emerald-700 font-mono">
-                  <CheckCircle2 className="size-2.5 text-emerald-600" />
-                  <span>{msg.lastKnownTransport === 'INTERNET' ? 'Sent to authority queue' : 'Stored locally — pending delivery'}</span>
-                </div>
               </div>
             );
           })
@@ -184,29 +165,25 @@ export default function OfflineEmergencyChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input Form */}
       <form onSubmit={handleSendMessage} className="mt-3 space-y-2">
-        <label className="flex items-center gap-1.5 text-[11px] text-ink-soft"><Languages className="size-3.5 text-sky-400" /> I&apos;m writing in
-          <select value={messageLanguage} onChange={(event) => setMessageLanguage(event.target.value)} className="rounded border border-line bg-surface px-2 py-1 text-[11px] text-ink">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Write a message…"
+            className="nb-input flex-1 text-sm"
+          />
+          <button type="submit" disabled={!text.trim()} className="minimal-button minimal-button-primary">
+            <Send className="size-4" /> Send
+          </button>
+        </div>
+        <label className="flex items-center gap-1.5 text-xs text-ink-soft">
+          Writing in
+          <select value={messageLanguage} onChange={(event) => setMessageLanguage(event.target.value)} className="rounded border border-line bg-surface px-1.5 py-0.5 text-xs text-ink">
             {COMMUNICATION_LANGUAGES.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}
           </select>
         </label>
-        <div className="flex items-center gap-2">
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type emergency message to Police HQ..."
-          className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink placeholder-ink-soft focus:outline-none focus:ring-1 focus:ring-sky-500"
-        />
-        <button
-          type="submit"
-          disabled={!text.trim()}
-          className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-sky-500 disabled:opacity-50"
-        >
-          <Send className="size-3.5" /> Send
-        </button>
-        </div>
       </form>
     </div>
   );

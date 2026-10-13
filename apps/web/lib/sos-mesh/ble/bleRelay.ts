@@ -22,7 +22,7 @@ import {
 import { hasSeenPacket, markPacketAsSeen, saveQueuedPacket } from '../indexedDbQueue';
 import { BloomFilter } from '../bloomFilter';
 
-export interface RelayEvent {
+interface RelayEvent {
   type: 'PACKET_RECEIVED' | 'PACKET_FORWARDED' | 'DUPLICATE_DROPPED' | 'EXPIRED_DROPPED' | 'INVALID_SIGNATURE_DROPPED';
   packetId: string;
   hopCount: number;
@@ -31,12 +31,12 @@ export interface RelayEvent {
   detail?: string;
 }
 
-export type RelayOutcome = { action: 'RELAYED' | 'DROPPED' | 'UPLOADED'; reason?: string };
+type RelayOutcome = { action: 'RELAYED' | 'DROPPED' | 'UPLOADED'; reason?: string };
 
 /** Returns how many peers accepted the packet. */
-export type MeshForwarder = (packet: SOSPacket) => Promise<number> | number;
+type MeshForwarder = (packet: SOSPacket) => Promise<number> | number;
 
-export class BLERelayEngine {
+class BLERelayEngine {
   private isEnabled = true;
   private eventListeners: Set<(event: RelayEvent) => void> = new Set();
   private forwarders: Set<MeshForwarder> = new Set();

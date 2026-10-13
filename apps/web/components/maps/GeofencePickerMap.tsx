@@ -4,7 +4,7 @@ import React from 'react';
 import { MapContainer, Marker, TileLayer, Polygon, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MousePointerClick, Undo, Trash2 } from 'lucide-react';
+import { Undo, Trash2 } from 'lucide-react';
 
 export type Point = [number, number]; // [lat, lng]
 
@@ -43,22 +43,18 @@ export default function GeofencePickerMap({
 }: GeofencePickerMapProps) {
   const center: [number, number] = points.length > 0
     ? [points[points.length - 1][0], points[points.length - 1][1]]
-    : [26.9124, 75.7873]; // Default region
+    : [26.9124, 75.7873]; // Jaipur
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-1.5 font-medium text-ink">
-          <MousePointerClick className="size-3.5 text-rose-600 animate-pulse" />
-          <span>Click anywhere on the map to add boundary points</span>
-        </div>
+        <span className="text-ink-soft">{points.length} point{points.length === 1 ? '' : 's'}{points.length < 3 ? ' — add at least 3' : ''}</span>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={onRemoveLastPoint}
             disabled={points.length === 0}
-            className="minimal-button minimal-button-secondary !py-1 px-2 text-[11px] disabled:opacity-40"
-            title="Undo last placed point"
+            className="minimal-button minimal-button-secondary min-h-0 px-2 py-1 text-[11px]"
           >
             <Undo className="size-3" />
             <span>Undo</span>
@@ -67,16 +63,15 @@ export default function GeofencePickerMap({
             type="button"
             onClick={onClearPoints}
             disabled={points.length === 0}
-            className="minimal-button minimal-button-secondary !py-1 px-2 text-[11px] disabled:opacity-40"
-            title="Clear all points"
+            className="minimal-button minimal-button-secondary min-h-0 px-2 py-1 text-[11px]"
           >
-            <Trash2 className="size-3 text-rose-600" />
+            <Trash2 className="size-3" />
             <span>Reset</span>
           </button>
         </div>
       </div>
 
-      <div className="relative h-60 w-full overflow-hidden rounded-xl border border-line shadow-inner">
+      <div className="h-60 w-full overflow-hidden rounded-xl border border-line">
         <MapContainer center={center} zoom={points.length > 0 ? 12 : 6} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -101,10 +96,6 @@ export default function GeofencePickerMap({
             />
           )}
         </MapContainer>
-
-        <div className="absolute bottom-2 left-2 z-[1000] rounded-md bg-surface/90 px-2 py-1 text-[11px] font-mono font-medium text-ink shadow border border-line backdrop-blur-sm">
-          {points.length} point{points.length === 1 ? '' : 's'} placed {points.length >= 3 ? '✓ Complete Polygon' : '(Need at least 3 points)'}
-        </div>
       </div>
     </div>
   );

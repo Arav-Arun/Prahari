@@ -22,7 +22,7 @@ function charValue(ch: string): number {
 }
 
 /** Computes the 7-3-1 weighted check digit for an MRZ field. */
-export function mrzCheckDigit(field: string): number {
+function mrzCheckDigit(field: string): number {
   let sum = 0;
   for (let i = 0; i < field.length; i++) {
     const v = charValue(field[i]);
@@ -102,7 +102,7 @@ export function buildSandboxMrz(): { line1: string; line2: string } {
   };
 }
 
-export interface MrzResult {
+interface MrzResult {
   documentType: string;
   issuingState: string;
   surname: string;
@@ -121,12 +121,12 @@ export interface MrzResult {
   };
 }
 
-export type MrzParseResult =
+type MrzParseResult =
   | { valid: true; data: MrzResult }
   | { valid: false; reason: string; checks?: Partial<MrzResult['checks']> };
 
 /** Normalises input: uppercase, strip whitespace, keep only MRZ-legal chars. */
-export function normaliseMrzLine(line: string): string {
+function normaliseMrzLine(line: string): string {
   return line.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9<]/g, '');
 }
 

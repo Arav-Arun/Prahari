@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Languages, Loader2, Mic, Send, Square, Volume2 } from 'lucide-react';
+import { AlertTriangle, Languages, Mic, Send, Square, Volume2, X } from 'lucide-react';
 import {
   COMMUNICATION_LANGUAGES,
   INTERNATIONAL_TRAVELLER_LANGUAGES,
@@ -42,7 +42,7 @@ export default function TravellerVoiceAssistant({ touristId, coords, preferredLa
   const initialLanguage = isCommunicationLanguageCode(preferredLanguage) ? preferredLanguage : 'hi-IN';
   const [languageCode, setLanguageCode] = useState<TravellerAssistanceLanguageCode>(initialLanguage);
   const [recording, setRecording] = useState(false);
-  const [status, setStatus] = useState('Choose a language, then tap the microphone and speak clearly.');
+  const [status, setStatus] = useState('Tap the microphone and speak.');
   const [transcript, setTranscript] = useState('');
   const [translation, setTranslation] = useState('');
   const [targetLanguage, setTargetLanguage] = useState<TravellerAssistanceLanguageCode>('en-IN');
@@ -60,12 +60,12 @@ export default function TravellerVoiceAssistant({ touristId, coords, preferredLa
     const recognition: SpeechRecognitionLike = new Recognition();
     recognitionRef.current = recognition;
     recognition.lang = languageCode;
-    recognition.onstart = () => { setRecording(true); setStatus('Listening… tap Stop when you are done.'); };
+    recognition.onstart = () => { setRecording(true); setStatus('Listening…'); };
     recognition.onresult = (event: any) => {
       const text = Array.from(event.results as any).map((result: any) => result?.[0]?.transcript || '').join(' ').trim();
       setTranscript(text);
       setTranslation('');
-      setStatus('Speech captured. Check the text before sending it.');
+      setStatus('Done. Check the text below.');
     };
     recognition.onerror = (event: any) => setError(event?.error || 'Speech recognition failed.');
     recognition.onend = () => setRecording(false);
@@ -87,14 +87,14 @@ export default function TravellerVoiceAssistant({ touristId, coords, preferredLa
       recorderRef.current = recorder;
       chunksRef.current = [];
       recorder.ondataavailable = (event) => { if (event.data.size) chunksRef.current.push(event.data); };
-      recorder.onstart = () => { setRecording(true); setStatus('Recording… tap Stop when you are done.'); };
+      recorder.onstart = () => { setRecording(true); setStatus('Recording…'); };
       recorder.onstop = async () => {
         setRecording(false);
         stream.getTracks().forEach((track) => track.stop());
         const audio = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
         if (!audio.size) { setError('No audio was captured. Please try again.'); return; }
         setBusy('transcribing');
-        setStatus('Transcribing with Sarvam AI…');
+        setStatus('Transcribing…');
         try {
           const formData = new FormData();
           formData.append('file', audio, 'voice-emergency.webm');
@@ -103,7 +103,7 @@ export default function TravellerVoiceAssistant({ touristId, coords, preferredLa
           const data = await response.json().catch(() => null);
           if (!response.ok || !data?.success || !data.transcript) throw new Error(data?.error || 'Speech could not be transcribed.');
           setTranscript(data.transcript);
-          setStatus('Sarvam transcription ready. Check it before sending.');
+          setStatus('Done. Check the text below.');
         } catch (cause: any) {
           setError(cause.message || 'Speech transcription could not be completed.');
         } finally { setBusy(null); }
@@ -161,7 +161,7 @@ export default function TravellerVoiceAssistant({ touristId, coords, preferredLa
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.error || 'Translation could not be completed.');
       setTranslation(data.translatedText);
-      setStatus(`Translation ready (${data.provider === 'sarvam_ai' ? 'Sarvam AI' : data.provider === 'openai' ? 'international language service' : 'same language'}).`);
+      setStatus('Translation ready.');
     } catch (cause: any) {
       setError(cause.message || 'Translation could not be completed.');
     } finally { setBusy(null); }
@@ -198,48 +198,56 @@ export default function TravellerVoiceAssistant({ touristId, coords, preferredLa
       if (!response.ok || !data?.success || !data.incident) throw new Error(data?.error || 'Voice SOS could not be sent.');
       setSentIncident(data.incident);
       onVoiceSos(data.incident);
-      setStatus('Voice SOS sent to the authority queue. Keep this screen open if it is safe to do so.');
+      setStatus('Voice SOS sent to the authority desk.');
     } catch (cause: any) {
       setError(cause.message || 'Voice SOS could not be sent.');
     } finally { setBusy(null); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/40 p-4 sm:p-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="voice-assistant-title">
-      <div className="flex min-h-full items-center justify-center py-6 sm:py-10">
-        <div className="relative w-full max-w-2xl rounded-2xl border border-line bg-surface p-5 sm:p-7 text-ink shadow-2xl space-y-5 my-auto">
-        <div className="flex items-start justify-between gap-4 border-b-2 border-line pb-4">
-          <div className="flex gap-3"><div className="rounded-lg bg-red-500/15 p-3 text-red-500"><Mic className="size-6" /></div><div><h2 id="voice-assistant-title" className="text-lg font-semibold">Voice emergency assistance</h2><p className="mt-1 text-sm leading-5 text-ink-soft">Speak an SOS or factual report in your language. Always check the written text before you send it.</p></div></div>
-          <button onClick={onClose} className="minimal-button minimal-button-secondary shrink-0 px-3 py-2 text-xs">Close</button>
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="voice-assistant-title">
+      <div className="modal-frame">
+        <div className="modal-panel max-w-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="voice-assistant-title" className="ui-display text-2xl">Voice help</h2>
+            <p className="mt-1 text-sm leading-5 text-ink-soft">Speak in your language. Check the text before you send it.</p>
+          </div>
+          <button onClick={onClose} className="minimal-button minimal-button-secondary px-2.5" aria-label="Close"><X className="size-4" /></button>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="text-sm font-semibold">Speak in
-            <select value={languageCode} disabled={recording || Boolean(busy)} onChange={(event) => { setLanguageCode(event.target.value as TravellerAssistanceLanguageCode); setTranscript(''); setTranslation(''); }} className="mt-1.5 w-full rounded border-2 border-line bg-surface-2 p-3 text-sm font-normal text-ink">
-              <optgroup label="Sarvam AI — Indian languages and English">{COMMUNICATION_LANGUAGES.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}</optgroup>
-              <optgroup label="Selected international languages — device speech fallback">{INTERNATIONAL_TRAVELLER_LANGUAGES.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}</optgroup>
-            </select>
-          </label>
-          <div className="rounded-lg border border-line bg-surface-2 p-3 text-xs leading-5 text-ink-soft"><strong className="text-ink">Privacy:</strong> Indian-language recordings are sent to Sarvam for transcription and are not saved by this screen. Selected international languages use your browser&apos;s speech tools where available.</div>
-        </div>
+        <label className="mt-5 block text-sm font-medium">Language
+          <select value={languageCode} disabled={recording || Boolean(busy)} onChange={(event) => { setLanguageCode(event.target.value as TravellerAssistanceLanguageCode); setTranscript(''); setTranslation(''); }} className="nb-input mt-1.5 text-sm">
+            <optgroup label="Indian languages and English">{COMMUNICATION_LANGUAGES.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}</optgroup>
+            <optgroup label="Other languages (uses your browser's speech)">{INTERNATIONAL_TRAVELLER_LANGUAGES.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}</optgroup>
+          </select>
+        </label>
 
-        <section className="mt-4 rounded-xl border-2 border-line bg-surface-2 p-5 text-center">
-          <button onClick={recording ? stop : start} disabled={Boolean(busy)} className={`mx-auto flex size-28 items-center justify-center rounded-full border-4 text-white shadow-lg transition disabled:opacity-60 ${recording ? 'border-red-300 bg-red-500 animate-pulse' : 'border-red-700 bg-red-600 hover:bg-red-700'}`} aria-label={recording ? 'Stop recording' : 'Start voice recording'}>
-            {recording ? <Square className="size-9 fill-current" /> : <Mic className="size-10" />}
+        <section className="mt-4 rounded-xl border border-line bg-surface-2 p-6 text-center">
+          <button onClick={recording ? stop : start} disabled={Boolean(busy)} className={`mx-auto flex size-24 items-center justify-center rounded-full text-white transition disabled:opacity-60 ${recording ? 'bg-ink' : 'bg-danger hover:bg-red-800'}`} aria-label={recording ? 'Stop recording' : 'Start recording'}>
+            {recording ? <Square className="size-8 fill-current" /> : <Mic className="size-9" />}
           </button>
-          <p className="mt-4 text-sm font-semibold">{busy === 'transcribing' ? 'Transcribing…' : recording ? 'Recording — tap the square to stop' : status}</p>
-          <p className="mt-1 text-xs text-ink-soft">{isCommunicationLanguageCode(languageCode) ? `Sarvam AI speech recognition · ${travellerLanguageLabel(languageCode)}` : `Device speech recognition · ${travellerLanguageLabel(languageCode)}`}</p>
+          <p className="mt-4 text-sm font-medium">{busy === 'transcribing' ? 'Transcribing…' : recording ? 'Recording — tap to stop' : status}</p>
         </section>
 
-        {error && <p role="alert" className="mt-4 flex gap-2 rounded border border-danger/50 bg-danger/10 p-3 text-sm text-ink"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" />{error}</p>}
+        {error && <p role="alert" className="mt-4 flex gap-2 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger"><AlertTriangle className="mt-0.5 size-4 shrink-0" />{error}</p>}
 
-        {transcript && <section className="mt-4 space-y-3 rounded-xl border border-success/40 bg-success/10 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="flex items-center gap-2 font-semibold"><CheckCircle2 className="size-5 text-success" /> Your spoken message</h3><button onClick={() => speak(transcript, languageCode)} disabled={Boolean(busy)} className="minimal-button minimal-button-secondary px-3 py-2 text-xs"><Volume2 className="size-4" /> Listen</button></div>
-          <textarea value={transcript} onChange={(event) => { setTranscript(event.target.value.slice(0, 2_000)); setTranslation(''); }} maxLength={2_000} rows={4} className="w-full rounded border border-line bg-surface p-3 text-sm leading-6 text-ink" aria-label="Review or correct transcribed message" />
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto]"><select value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value as TravellerAssistanceLanguageCode)} className="rounded border border-line bg-surface p-2.5 text-sm text-ink">{[...COMMUNICATION_LANGUAGES, ...INTERNATIONAL_TRAVELLER_LANGUAGES].map((language) => <option key={language.code} value={language.code}>Translate to {language.label}</option>)}</select><button onClick={translate} disabled={Boolean(busy)} className="minimal-button minimal-button-secondary justify-center px-4 py-2.5 text-sm"><Languages className="size-4" /> {busy === 'translating' ? 'Translating…' : 'Translate'}</button></div>
-          {translation && <div className="rounded-lg border border-line bg-surface p-3 text-sm leading-6"><div className="mb-2 flex items-center justify-between gap-2"><strong>{travellerLanguageLabel(targetLanguage)}</strong><button onClick={() => speak(translation, targetLanguage)} disabled={Boolean(busy)} className="text-xs font-semibold text-sky-400 hover:underline"><Volume2 className="mr-1 inline size-3.5" />Play</button></div>{translation}</div>}
-          <div className="grid gap-2 sm:grid-cols-2"><button onClick={() => onUseInReport(transcript)} className="minimal-button minimal-button-secondary justify-center px-4 py-3 text-sm"><Languages className="size-4" /> Use in emergency report</button><button onClick={sendVoiceSos} disabled={Boolean(busy) || Boolean(sentIncident)} className="minimal-button minimal-button-primary justify-center bg-red-600 px-4 py-3 text-sm hover:bg-red-700 disabled:opacity-60"><Send className="size-4" /> {busy === 'sending' ? 'Sending SOS…' : sentIncident ? 'Voice SOS sent' : 'Send voice SOS'}</button></div>
-          <p className="text-xs leading-5 text-ink-soft">Sending creates a critical incident with your reviewed words and current/last-known location for authorised responders. Call <strong className="text-ink">112</strong> if you are in immediate danger.</p>
+        {transcript && <section className="mt-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">What you said</h3>
+            <button onClick={() => speak(transcript, languageCode)} disabled={Boolean(busy)} className="minimal-button minimal-button-secondary text-xs"><Volume2 className="size-4" /> Listen</button>
+          </div>
+          <textarea value={transcript} onChange={(event) => { setTranscript(event.target.value.slice(0, 2_000)); setTranslation(''); }} maxLength={2_000} rows={4} className="nb-input text-sm leading-6" aria-label="Review or correct the transcript" />
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+            <select value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value as TravellerAssistanceLanguageCode)} className="nb-input text-sm">{[...COMMUNICATION_LANGUAGES, ...INTERNATIONAL_TRAVELLER_LANGUAGES].map((language) => <option key={language.code} value={language.code}>Translate to {language.label}</option>)}</select>
+            <button onClick={translate} disabled={Boolean(busy)} className="minimal-button minimal-button-secondary"><Languages className="size-4" /> {busy === 'translating' ? 'Translating…' : 'Translate'}</button>
+          </div>
+          {translation && <div className="rounded-lg border border-line bg-surface-2 p-3 text-sm leading-6"><div className="mb-2 flex items-center justify-between gap-2"><strong>{travellerLanguageLabel(targetLanguage)}</strong><button onClick={() => speak(translation, targetLanguage)} disabled={Boolean(busy)} className="text-xs font-semibold underline"><Volume2 className="mr-1 inline size-3.5" />Play</button></div>{translation}</div>}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button onClick={() => onUseInReport(transcript)} className="minimal-button minimal-button-secondary">Use in a report</button>
+            <button onClick={sendVoiceSos} disabled={Boolean(busy) || Boolean(sentIncident)} className="minimal-button minimal-button-danger"><Send className="size-4" /> {busy === 'sending' ? 'Sending…' : sentIncident ? 'Voice SOS sent' : 'Send as voice SOS'}</button>
+          </div>
+          <p className="text-xs leading-5 text-ink-soft">A voice SOS sends these words and your location to the authority desk. Call <a href="tel:112" className="font-semibold text-ink">112</a> if you are in immediate danger.</p>
         </section>}
       </div>
     </div>

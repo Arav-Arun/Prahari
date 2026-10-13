@@ -8,7 +8,7 @@ export interface GeofenceZone {
   coordinates: Array<[number, number]>; // [lat, lng] array
 }
 
-export interface GeofenceCheckResult {
+interface GeofenceCheckResult {
   isBreached: boolean;
   breachedZone: GeofenceZone | null;
   riskPenalty: number;

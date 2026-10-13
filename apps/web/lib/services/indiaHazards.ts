@@ -18,7 +18,7 @@ const EARTH_RADIUS_KM = 6371;
  * warning). Both are normalised onto this one scale so a colour-coded flood
  * warning is ranked and scored exactly like a worded one.
  */
-export type HazardSeverity = 'WARNING' | 'ALERT' | 'WATCH' | 'ADVISORY';
+type HazardSeverity = 'WARNING' | 'ALERT' | 'WATCH' | 'ADVISORY';
 
 const SEVERITY_RANK: Record<HazardSeverity, number> = { WARNING: 4, ALERT: 3, WATCH: 2, ADVISORY: 1 };
 const COLOUR_SEVERITY: Record<string, HazardSeverity> = { RED: 'WARNING', ORANGE: 'ALERT', YELLOW: 'WATCH', GREEN: 'ADVISORY' };
@@ -191,7 +191,7 @@ async function refreshFeed(): Promise<HazardFeedResult> {
   }
 }
 
-export async function getIndiaHazardFeed(): Promise<HazardFeedResult> {
+async function getIndiaHazardFeed(): Promise<HazardFeedResult> {
   if (cachedFeed && Date.now() - new Date(cachedFeed.fetchedAt).getTime() < CACHE_TTL_MS) {
     return { status: 'available', alerts: cachedFeed.alerts, fetchedAt: cachedFeed.fetchedAt, sourceUrl: NDMA_ALERTS_URL };
   }

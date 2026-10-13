@@ -17,8 +17,8 @@ const serif = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Prahari | Tourist Safety Command",
-  description: "AI-Powered Tourist Safety, Digital Identity & Offline Emergency SOS Mesh",
+  title: "Prahari — Tourist Safety",
+  description: "Digital tourist ID, location-aware safety alerts and emergency SOS for travellers in India.",
   manifest: "/manifest.json",
 };
 
@@ -26,7 +26,6 @@ export const viewport: Viewport = {
   themeColor: "#fbfbf8",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

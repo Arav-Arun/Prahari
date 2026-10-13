@@ -1,4 +1,5 @@
 import { getSupabase } from "./supabase";
+import { DEMO_ACCOUNTS_ENABLED } from "./demoAccounts";
 import {
   operationalGeofences,
   operationalIncidents,
@@ -11,14 +12,16 @@ export { isSupabaseConfigured } from "./supabase";
 /** Rows come back with camelCase columns already matching the API shape. */
 type Row = Record<string, any>;
 
-// In-memory fallback stores when Supabase is not configured or in fallback mode
-const inMemoryTourists = new Map<string, Row>();
-
 // Process-local storage is used only when no database is configured (for local
 // development). Once Supabase is configured, a database failure must never be
-// replaced with a fixture record or a pretend successful write.
-const inMemoryLocations: Row[] = [];
-const inMemoryIncidents = new Map<string, Row>();
+// replaced with a fixture record or a pretend successful write. The stores live
+// on globalThis because Next.js bundles each route separately, and every route
+// must see the same records.
+const memory: Record<string, any> = ((globalThis as any).__prahariMemory ??= {});
+const inMemoryTourists: Map<string, Row> = (memory.tourists ??= new Map());
+const inMemoryLocations: Row[] = (memory.locations ??= []);
+const inMemoryIncidents: Map<string, Row> = (memory.incidents ??= new Map());
+const inMemoryGeofences: Map<string, Row> = (memory.geofences ??= new Map());
 
 // ------------------------------------------------------------------ tourists
 export async function getTourist(touristId: string): Promise<Row | null> {
@@ -29,7 +32,7 @@ export async function getTourist(touristId: string): Promise<Row | null> {
   return data ?? null;
 }
 
-/** Matches the old `$or: [{touristId}, {did}]` lookup. */
+/** Looks a tourist up by either their tourist ID or DID. */
 export async function getTouristByIdOrDid(id: string): Promise<Row | null> {
   const sb = getSupabase();
   if (!sb) {
@@ -120,7 +123,7 @@ export async function listLocations(touristId: string, limit = 50): Promise<Row[
 // ----------------------------------------------------------------- geofences
 export async function listActiveGeofences(): Promise<Row[]> {
   const sb = getSupabase();
-  if (!sb) return [];
+  if (!sb) return [...inMemoryGeofences.values()].filter((geofence) => geofence.active !== false);
   const { data, error } = await sb.from("geofences").select("*").eq("active", true);
   if (error) { console.warn("[prahari] listActiveGeofences:", error.message); return []; }
   return data ?? [];
@@ -128,7 +131,11 @@ export async function listActiveGeofences(): Promise<Row[]> {
 
 export async function insertGeofence(row: Row): Promise<Row | null> {
   const sb = getSupabase();
-  if (!sb) return null;
+  if (!sb) {
+    const stored = { id: crypto.randomUUID(), active: true, createdAt: new Date().toISOString(), ...row };
+    inMemoryGeofences.set(stored.id, stored);
+    return stored;
+  }
   const { data, error } = await sb.from("geofences").insert(row).select().single();
   if (error) { console.warn("[prahari] insertGeofence:", error.message); return null; }
   return data;
@@ -137,19 +144,16 @@ export async function insertGeofence(row: Row): Promise<Row | null> {
 /** Updates an authority-published boundary without delete-and-recreate loss. */
 export async function updateGeofence(id: string, fields: Row): Promise<Row | null> {
   const sb = getSupabase();
-  if (!sb) return null;
+  if (!sb) {
+    const existing = inMemoryGeofences.get(id);
+    if (!existing) return null;
+    const updated = { ...existing, ...fields };
+    inMemoryGeofences.set(id, updated);
+    return updated;
+  }
   const { data, error } = await sb.from("geofences").update(fields).eq("id", id).select().maybeSingle();
   if (error) { console.warn("[prahari] updateGeofence:", error.message); return null; }
   return data ?? null;
-}
-
-export async function replaceGeofences(rows: Row[]): Promise<boolean> {
-  const sb = getSupabase();
-  if (!sb) return false;
-  await sb.from("geofences").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  const { error } = await sb.from("geofences").insert(rows);
-  if (error) { console.warn("[prahari] replaceGeofences:", error.message); return false; }
-  return true;
 }
 
 // ---------------------------------------------------------------- responders
@@ -161,18 +165,19 @@ export async function listResponders(): Promise<Row[]> {
   return data ?? [];
 }
 
-export async function replaceResponders(rows: Row[]): Promise<boolean> {
+// ----------------------------------------------------------------- incidents
+export async function getIncident(incidentId: string): Promise<Row | null> {
+  const memory = inMemoryIncidents.get(incidentId) ?? null;
   const sb = getSupabase();
-  if (!sb) return false;
-  await sb.from("responders").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  const { error } = await sb.from("responders").insert(rows);
-  if (error) { console.warn("[prahari] replaceResponders:", error.message); return false; }
-  return true;
+  if (!sb) return memory;
+  const { data, error } = await sb.from("incidents").select("*").eq("incidentId", incidentId).maybeSingle();
+  if (error) { console.warn("[prahari] getIncident:", error.message); return memory; }
+  return data ? { ...(memory ?? {}), ...data } : memory;
 }
 
-// ----------------------------------------------------------------- incidents
-export async function listIncidents(limit = 50): Promise<Row[]> {
-  const memRows = Array.from(inMemoryIncidents.values());
+/** Most recent incidents, optionally only one traveller's. */
+export async function listIncidents(limit = 50, touristId?: string): Promise<Row[]> {
+  const memRows = Array.from(inMemoryIncidents.values()).filter((row) => !touristId || row.touristId === touristId);
   const sb = getSupabase();
   if (!sb) {
     return memRows
@@ -180,10 +185,9 @@ export async function listIncidents(limit = 50): Promise<Row[]> {
       .slice(0, limit);
   }
 
-  const { data, error } = await sb
-    .from("incidents").select("*")
-    .order("createdAt", { ascending: false })
-    .limit(limit);
+  let query = sb.from("incidents").select("*");
+  if (touristId) query = query.eq("touristId", touristId);
+  const { data, error } = await query.order("createdAt", { ascending: false }).limit(limit);
 
   if (error) {
     console.warn("[prahari] listIncidents:", error.message);
@@ -292,24 +296,7 @@ export async function upsertIncident(row: Row): Promise<boolean> {
   return true;
 }
 
-export async function deleteIncident(incidentId: string): Promise<boolean> {
-  const sb = getSupabase();
-  if (!sb) {
-    if (!inMemoryIncidents.has(incidentId)) return false;
-    inMemoryIncidents.delete(incidentId);
-    return true;
-  }
-  const { data, error } = await sb.from("incidents").delete().eq("incidentId", incidentId).select("incidentId");
-  if (error) {
-    console.warn("[prahari] deleteIncident:", error.message);
-    return false;
-  }
-  if (!data?.length) return false;
-  inMemoryIncidents.delete(incidentId);
-  return true;
-}
-
-/** Replaces the old `find({ efirDraft: { $exists: true } })`. */
+/** Incidents that carry a traveller report draft. */
 export async function listIncidentsWithEfir(): Promise<Row[]> {
   const sb = getSupabase();
   if (!sb) return [...inMemoryIncidents.values()].filter((incident) => incident.efirDraft);
@@ -324,13 +311,13 @@ export async function listIncidentsWithEfir(): Promise<Row[]> {
 // --------------------------------------------------------------- dashboard
 export async function listTourists(limit = 200): Promise<Row[]> {
   const sb = getSupabase();
-  if (!sb) return [];
+  if (!sb) return [...inMemoryTourists.values()].slice(0, limit);
   const { data, error } = await sb.from("tourists").select("*").limit(limit);
   if (error) { console.warn("[prahari] listTourists:", error.message); return []; }
   return data ?? [];
 }
 
-export type DashboardStats = {
+type DashboardStats = {
   activeTourists: number;
   liveIncidents: number;
   highRiskZones: number;
@@ -341,27 +328,36 @@ export type DashboardStats = {
 /** Real aggregate counts for the authority dashboard tiles. */
 export async function getDashboardStats(): Promise<DashboardStats | null> {
   const sb = getSupabase();
-  if (!sb) return null;
+  let rows: { tourists: Row[]; incidents: Row[]; zones: Row[]; responders: Row[] };
 
-  const [tourists, incidents, zones, responders] = await Promise.all([
-    sb.from("tourists").select("touristId,name,identityStatus"),
-    sb.from("incidents").select("incidentId,touristId,touristName,type,status"),
-    sb.from("geofences").select("id,name,severity,active"),
-    sb.from("responders").select("id,responderId,unitId,status"),
-  ]);
-
-  const err = [tourists, incidents, zones, responders].find((r) => r.error);
-  if (err?.error) { console.warn("[prahari] getDashboardStats:", err.error.message); return null; }
+  if (!sb) {
+    rows = {
+      tourists: [...inMemoryTourists.values()],
+      incidents: [...inMemoryIncidents.values()],
+      zones: [...inMemoryGeofences.values()],
+      responders: [],
+    };
+  } else {
+    const [tourists, incidents, zones, responders] = await Promise.all([
+      sb.from("tourists").select("touristId,name,identityStatus"),
+      sb.from("incidents").select("incidentId,touristId,touristName,type,status"),
+      sb.from("geofences").select("id,name,severity,active"),
+      sb.from("responders").select("id,responderId,unitId,status"),
+    ]);
+    const err = [tourists, incidents, zones, responders].find((r) => r.error);
+    if (err?.error) { console.warn("[prahari] getDashboardStats:", err.error.message); return null; }
+    rows = { tourists: tourists.data ?? [], incidents: incidents.data ?? [], zones: zones.data ?? [], responders: responders.data ?? [] };
+  }
 
   const liveIncidentStatuses = new Set(['resolved', 'cancelled', 'rejected']);
-  const visibleIncidents = operationalIncidents(incidents.data ?? []).filter(
+  const visibleIncidents = operationalIncidents(rows.incidents).filter(
     (incident) => !liveIncidentStatuses.has(String(incident.status ?? '').toLowerCase())
   );
-  const visibleZones = operationalGeofences(zones.data ?? []);
-  const visibleResponders = operationalResponders(responders.data ?? []);
+  const visibleZones = operationalGeofences(rows.zones);
+  const visibleResponders = operationalResponders(rows.responders);
 
   return {
-    activeTourists: operationalTourists(tourists.data ?? []).length,
+    activeTourists: operationalTourists(rows.tourists).length,
     liveIncidents: visibleIncidents.length,
     highRiskZones: visibleZones.filter(
       (zone) => ['high', 'critical'].includes(String(zone.severity ?? '').toLowerCase()) && zone.active !== false
@@ -412,7 +408,7 @@ export async function updateIncident(incidentId: string, fields: Row): Promise<R
 }
 
 // ------------------------------------------------------------- kyc sessions
-export interface KycSessionRow {
+interface KycSessionRow {
   sessionId: string;
   method: 'aadhaar' | 'passport';
   status: string;
@@ -424,7 +420,7 @@ export interface KycSessionRow {
   expiresAt: string;
 }
 
-const inMemoryKycSessions = new Map<string, KycSessionRow>();
+const inMemoryKycSessions: Map<string, KycSessionRow> = (memory.kycSessions ??= new Map());
 
 export async function createKycSession(row: {
   sessionId: string; method: string; status: string; subjectHash: string;
@@ -542,7 +538,7 @@ export async function logCredentialIssuance(row: {
 }
 
 // ------------------------------------------------------------------ users
-export interface UserRow {
+interface UserRow {
   id?: string;
   userId: string;
   email: string;
@@ -609,7 +605,7 @@ const DEMO_USERS: Record<string, UserRow> = {
 
 export async function getUserByEmail(email: string): Promise<UserRow | null> {
   const cleanEmail = email.toLowerCase().trim();
-  const demoFallback = DEMO_USERS[cleanEmail] ?? (cleanEmail.includes('police') || cleanEmail.includes('prahari') ? DEMO_USERS['officer.sharma@police.gov.in'] : null);
+  const demoFallback = DEMO_ACCOUNTS_ENABLED ? DEMO_USERS[cleanEmail] ?? null : null;
   const sb = getSupabase();
   if (!sb) return demoFallback;
   try {
@@ -623,35 +619,4 @@ export async function getUserByEmail(email: string): Promise<UserRow | null> {
   } catch {
     return demoFallback;
   }
-}
-
-export async function getUserById(userId: string): Promise<UserRow | null> {
-  const demoMatch = Object.values(DEMO_USERS).find((u) => u.userId === userId);
-  const sb = getSupabase();
-  if (!sb) return demoMatch ?? null;
-  const { data, error } = await sb
-    .from("users")
-    .select("*")
-    .eq("userId", userId)
-    .maybeSingle();
-  if (error) { console.warn("[prahari] getUserById:", error.message); }
-  return (data as UserRow) ?? demoMatch ?? null;
-}
-
-export async function upsertUser(user: UserRow): Promise<boolean> {
-  const sb = getSupabase();
-  if (!sb) return false;
-  const { error } = await sb
-    .from("users")
-    .upsert({ ...user, email: user.email.toLowerCase().trim(), updatedAt: new Date().toISOString() }, { onConflict: "userId" });
-  if (error) { console.warn("[prahari] upsertUser:", error.message); return false; }
-  return true;
-}
-
-export async function listUsers(): Promise<UserRow[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  const { data, error } = await sb.from("users").select("*");
-  if (error) { console.warn("[prahari] listUsers:", error.message); return []; }
-  return (data as UserRow[]) ?? [];
 }

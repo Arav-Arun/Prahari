@@ -58,7 +58,7 @@ type BluetoothDeviceLike = {
   addEventListener?: (event: 'gattserverdisconnected', listener: () => void) => void;
 };
 
-export type BleRelayStatus = {
+type BleRelayStatus = {
   supported: boolean;
   paired: boolean;
   gatewayName: string | null;

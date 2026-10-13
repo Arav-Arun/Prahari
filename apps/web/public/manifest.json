@@ -1,11 +1,11 @@
 {
-  "name": "Prahari — Tourist Safety & Offline SOS Mesh",
+  "name": "Prahari — Tourist Safety",
   "short_name": "Prahari",
-  "description": "AI-Powered Tourist Safety, Digital Identity & Connectivity-Agnostic Offline Emergency SOS Mesh",
+  "description": "Digital tourist ID, location-aware safety alerts and emergency SOS.",
   "start_url": "/citizen",
   "display": "standalone",
-  "background_color": "#090d16",
-  "theme_color": "#090d16",
+  "background_color": "#fbfbf8",
+  "theme_color": "#fbfbf8",
   "orientation": "portrait",
   "icons": [
     {

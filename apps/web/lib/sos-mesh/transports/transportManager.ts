@@ -17,7 +17,7 @@ import { getPendingQueuedPackets, updateQueuedPacketStatus } from '../indexedDbQ
 
 type TransportLoader = () => Promise<SOSTransport | null>;
 
-export type SOSTransportManagerDependencies = {
+type SOSTransportManagerDependencies = {
   internetTransport?: InternetTransport;
   localTransport?: LocalTransport;
   loadBleTransport?: TransportLoader;
@@ -29,9 +29,11 @@ const loadOptionalBleTransport: TransportLoader = async () => {
   return globalBleTransport;
 };
 
+// A paired phone over WebRTC. It reports itself unavailable until a pairing is
+// open, so an unpaired traveller is never told a nearby device has the SOS.
 const loadOptionalPeerMeshTransport: TransportLoader = async () => {
-  const { globalBroadcastMeshTransport } = await import('./broadcastMeshTransport');
-  return globalBroadcastMeshTransport;
+  const { globalWebRtcTransport } = await import('./webRtcTransport');
+  return globalWebRtcTransport;
 };
 
 export class SOSTransportManager {
@@ -125,16 +127,15 @@ export class SOSTransportManager {
     // and retries it the moment a network returns.
     const localResult = await this.tryTransport(this.localTransport, packet);
 
+    // Other Prahari tabs in this browser relay it if they are online. Best
+    // effort only: nobody may be listening, so it never counts as a handoff.
+    if (typeof window !== 'undefined') {
+      void import('./broadcastMeshTransport')
+        .then(({ globalBroadcastMeshTransport }) => globalBroadcastMeshTransport.send(packet))
+        .catch(() => undefined);
+    }
+
     const peerResult = await this.tryOfflineLink(allowPeerMesh, this.loadPeerMeshTransport, packet, 'TRY_PEER_MESH');
-
-    // Automatically emit near-ultrasonic sound beacon (18.5 - 19.5 kHz FSK) for zero-pairing microphone pick up
-    void (async () => {
-      try {
-        const { globalAcousticTransport } = await import('./acousticTransport');
-        await this.tryTransport(globalAcousticTransport, packet);
-      } catch {}
-    })();
-
     if (peerResult) {
       globalSOSStateMachine.transitionTo('RELAYED', {
         incidentId: packet.incidentId,

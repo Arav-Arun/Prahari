@@ -17,13 +17,12 @@
 
 import {
   NostrSOSEvent,
-  NOSTR_KIND_MESH_CHAT,
   SOSPacket,
   canonicalCoord,
 } from './sosPacket';
 
 const MAGIC_HEADER = 0x4e4f; // 'NO'
-export const MESH_FRAME_VERSION = 2;
+const MESH_FRAME_VERSION = 2;
 
 /** Smallest frame: fixed header + empty relay path + five empty strings + empty content + sig. */
 const MIN_FRAME_LENGTH = 85 + 1 + 5 + 2 + 64;
@@ -36,7 +35,7 @@ const MAX_RELAY_PATH_ENTRIES = 16;
 
 const SEVERITY_HIGH_FLAG = 0x01;
 
-export interface MeshFrame {
+interface MeshFrame {
   event: NostrSOSEvent;
   ttl: number;
   hopCount: number;
@@ -242,9 +241,4 @@ export function unpackMeshFrame(buffer: Uint8Array): MeshFrame | null {
     console.warn('[nostrEncoder] Failed to unpack mesh frame:', err);
     return null;
   }
-}
-
-/** True when a frame carries emergency chat rather than an SOS alert. */
-export function isChatFrame(frame: MeshFrame): boolean {
-  return frame.event.kind === NOSTR_KIND_MESH_CHAT;
 }

@@ -7,10 +7,11 @@
 
 import { sha256, toUtf8Bytes } from 'ethers';
 import { getDevicePubkey, signEventId, verifyEventSignature } from './nostrKeys';
+import { newIncidentId } from '../ids';
 
 /** NIP-01 kind numbers used by the Prahari mesh. */
-export const NOSTR_KIND_SOS_ALERT = 20000;
-export const NOSTR_KIND_MESH_CHAT = 20001;
+const NOSTR_KIND_SOS_ALERT = 20000;
+const NOSTR_KIND_MESH_CHAT = 20001;
 
 export interface NostrSOSEvent {
   id: string; // 32-byte sha256 hex hash of serialized [0, pubkey, created_at, kind, tags, content]
@@ -52,11 +53,11 @@ export interface SOSPacket {
   nostrEvent?: NostrSOSEvent; // Integrated Nostr NIP-01 Event structure
 }
 
-export const CURRENT_PACKET_VERSION = 1;
-export const DEFAULT_PACKET_TTL = 8;
-export const DEFAULT_PACKET_LIFESPAN_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CURRENT_PACKET_VERSION = 1;
+const DEFAULT_PACKET_TTL = 8;
+const DEFAULT_PACKET_LIFESPAN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-export function encodeGeohash(lat: number, lon: number, precision: number = 6): string {
+function encodeGeohash(lat: number, lon: number, precision: number = 6): string {
   const B32 = '0123456789bcdefghjkmnpqrstuvwxyz';
   let latMin = -90, latMax = 90;
   let lonMin = -180, lonMax = 180;
@@ -120,7 +121,7 @@ export function canonicalCoord(value: number): number {
  * Builds and signs the immutable Nostr event for a packet. Called once, by the
  * originating device. Relays forward the result verbatim.
  */
-export function toNostrSOSEvent(packet: SOSPacket, pubkeyHex?: string, signatureHex?: string): NostrSOSEvent {
+function toNostrSOSEvent(packet: SOSPacket, pubkeyHex?: string, signatureHex?: string): NostrSOSEvent {
   const pubkey = pubkeyHex ?? getDevicePubkey() ?? '';
   const createdAt = Math.floor(packet.timestamp / 1000);
   const kind = packet.packetCategory === 'CHAT_MESSAGE' ? NOSTR_KIND_MESH_CHAT : NOSTR_KIND_SOS_ALERT;
@@ -171,7 +172,7 @@ export function toNostrSOSEvent(packet: SOSPacket, pubkeyHex?: string, signature
 }
 
 /** Mutable per-hop transport metadata carried alongside the signed event. */
-export interface MeshEnvelope {
+interface MeshEnvelope {
   ttl: number;
   hopCount: number;
   relayPath?: string[];
@@ -262,7 +263,7 @@ export function createSOSPacket(params: {
   ttl?: number;
 }): SOSPacket {
   const now = Date.now();
-  const incidentId = params.incidentId ?? `INC-${Math.floor(1000 + Math.random() * 9000)}`;
+  const incidentId = params.incidentId ?? newIncidentId();
   const packetId = `PKT-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
   const originDeviceId = params.originDeviceId ?? getOrCreateDeviceId();
 
@@ -401,9 +402,3 @@ export function getOrCreateDeviceId(): string {
     return `NODE-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
   }
 }
-
-/**
- * This device's Nostr pubkey. Re-exported here so packet code has one import
- * surface; the key itself is owned by nostrKeys.
- */
-export { getDevicePubkey } from './nostrKeys';

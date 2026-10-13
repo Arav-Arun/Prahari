@@ -5,7 +5,7 @@
  * from initial button trigger down to store-and-forward relay and gateway delivery.
  */
 
-export type SOSState =
+type SOSState =
   | 'IDLE'
   | 'SOS_TRIGGERED'
   | 'PACKET_CREATED'
@@ -22,9 +22,9 @@ export type SOSState =
   | 'CANCELLED';
 
 /** Mirrors TransportChannel; kept local so the state machine stays dependency-free. */
-export type SOSTransportLabel = 'INTERNET' | 'PEER_MESH' | 'BLE_RELAY' | 'LOCAL_QUEUE';
+type SOSTransportLabel = 'INTERNET' | 'PEER_MESH' | 'BLE_RELAY' | 'LOCAL_QUEUE';
 
-export interface SOSStateChangeEvent {
+interface SOSStateChangeEvent {
   previousState: SOSState;
   currentState: SOSState;
   timestamp: number;
@@ -34,7 +34,7 @@ export interface SOSStateChangeEvent {
   hopCount?: number;
 }
 
-export type SOSStateListener = (event: SOSStateChangeEvent) => void;
+type SOSStateListener = (event: SOSStateChangeEvent) => void;
 
 export class SOSStateMachine {
   private state: SOSState = 'IDLE';

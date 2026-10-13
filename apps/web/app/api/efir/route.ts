@@ -1,9 +1,10 @@
+import { newIncidentId } from '@/lib/ids';
 import { NextRequest, NextResponse } from 'next/server';
-import { listIncidentsWithEfir, upsertIncident, listIncidents, updateIncident, getTourist } from '@/lib/db';
+import { listIncidentsWithEfir, upsertIncident, updateIncident, getTourist, getIncident } from '@/lib/db';
 import { emitToGateway } from '@/lib/services/gatewayEmit';
 import { canAccessTouristData, requireAuth } from '@/lib/auth/guards';
 import { anchorEfirEvidence, verifyEfirEvidence } from '@/lib/blockchain/incidentEvidence';
-import { operationalIncidents } from '@/lib/operationalData';
+import { operationalIncidents, isFixtureIncident } from '@/lib/operationalData';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     const efirId = `PDR-${new Date().getUTCFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     const draftEfIR = {
       efirId,
-      incidentId: incidentId || `INC-${Math.floor(1000 + Math.random() * 9000)}`,
+      incidentId: incidentId || newIncidentId(),
       touristId,
       touristName: tourist.name ?? touristName ?? touristId,
       passportAadhaar: passportAadhaar ? String(passportAadhaar).slice(0, 120) : null,
@@ -119,9 +120,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Attach the draft to the incident, creating a stub incident if absent.
-    const existing = (await listIncidents(100)).find(
-      (i: any) => i.incidentId === draftEfIR.incidentId
-    );
+    const existing = await getIncident(draftEfIR.incidentId);
     if (!await upsertIncident({
       ...(existing ?? {
         incidentId: draftEfIR.incidentId,
@@ -159,8 +158,8 @@ export async function GET(request: NextRequest) {
   try {
     const incidentId = new URL(request.url).searchParams.get('incidentId');
     if (incidentId) {
-      const incident = operationalIncidents(await listIncidents(200)).find((item: any) => item.incidentId === incidentId && item.efirDraft);
-      if (!incident) return NextResponse.json({ success: false, error: 'Incident information draft not found.' }, { status: 404 });
+      const incident = await getIncident(incidentId);
+      if (!incident?.efirDraft || isFixtureIncident(incident)) return NextResponse.json({ success: false, error: 'Incident information draft not found.' }, { status: 404 });
       if (session.role === 'tourist' && incident.touristId !== session.touristId) {
         return NextResponse.json({ success: false, error: 'Unauthorised.' }, { status: 403 });
       }
@@ -206,10 +205,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Find the incident with the Prahari draft.
-    const allIncidents = operationalIncidents(await listIncidents(200));
-    const incident = allIncidents.find((i: any) => i.incidentId === incidentId && i.efirDraft);
+    const incident = await getIncident(incidentId);
 
-    if (!incident) {
+    if (!incident?.efirDraft || isFixtureIncident(incident)) {
       return NextResponse.json(
         { success: false, error: `Incident ${incidentId} not found or has no incident information draft` },
         { status: 404 }

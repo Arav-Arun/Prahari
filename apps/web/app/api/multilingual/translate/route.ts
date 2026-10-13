@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canAccessTouristData, requireAuth } from '@/lib/auth/guards';
 import { isCommunicationLanguageCode } from '@/lib/languages';
-import { listIncidents } from '@/lib/db';
+import { getIncident } from '@/lib/db';
 import { translateCommunication } from '@/lib/services/multilingualCommunication';
 
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Choose supported source and target languages.' }, { status: 400 });
     }
 
-    const incident = (await listIncidents(200)).find((item: any) => item.incidentId === incidentId);
+    const incident = await getIncident(incidentId);
     if (!incident) return NextResponse.json({ success: false, error: 'Incident not found.' }, { status: 404 });
     if (!canAccessTouristData(auth.session, incident.touristId)) {
       return NextResponse.json({ success: false, error: 'You are not authorised to translate this incident communication.' }, { status: 403 });

@@ -29,20 +29,6 @@ for (const name of [
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
-  async redirects() {
-    return [
-      {
-        source: '/signin',
-        destination: '/login',
-        permanent: false,
-      },
-      {
-        source: '/sign-in',
-        destination: '/login',
-        permanent: false,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

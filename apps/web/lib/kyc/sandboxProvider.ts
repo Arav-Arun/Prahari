@@ -14,6 +14,9 @@ const OTP_TTL_MS = 10 * 60 * 1000;
 /** Passport sessions resolve immediately; short TTL guards the issue step. */
 const PASSPORT_TTL_MS = 15 * 60 * 1000;
 
+/** MRZ names are upper-case by specification; store them as people write them. */
+const titleCase = (name: string) => name.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());
+
 const ISO3_TO_NAME: Record<string, string> = {
   IND: 'India', USA: 'United States', GBR: 'United Kingdom', AUS: 'Australia',
   CAN: 'Canada', DEU: 'Germany', FRA: 'France', JPN: 'Japan', SGP: 'Singapore',
@@ -36,7 +39,7 @@ const ISO3_TO_NAME: Record<string, string> = {
  *   - No demographic data is fetched from UIDAI, so the holder's name is
  *     self-asserted and recorded as such on the credential
  */
-export class SandboxKycProvider implements KycProvider {
+class SandboxKycProvider implements KycProvider {
   readonly id = 'prahari-sandbox-v1';
   readonly isSandbox = true;
 
@@ -91,7 +94,7 @@ export class SandboxKycProvider implements KycProvider {
     const expiresAt = new Date(Date.now() + PASSPORT_TTL_MS).toISOString();
 
     const subject: KycSubject = {
-      fullName: [d.givenNames, d.surname].filter(Boolean).join(' '),
+      fullName: titleCase([d.givenNames, d.surname].filter(Boolean).join(' ')),
       nationality: ISO3_TO_NAME[d.nationality] ?? d.nationality,
       nationalityCode: d.nationality,
       dateOfBirth: d.dateOfBirth,

@@ -1,82 +1,152 @@
+<div align="center">
+
 # Prahari
 
-Prahari is a consent-first tourist-safety prototype. It lets a traveller create a **sandbox-verified digital tourist credential**, opt in to location sharing, trigger a GPS-backed SOS, and prepare a police-ready incident-information draft for authorised review. Authorised staff can review the operational queue, create geofences, and see only the data they are permitted to access.
+**A safety ID and SOS line for travellers in India.**
 
-The deployed demonstrator is a prototype, not a government emergency service. Start with the [documentation index](docs/README.md), then use the [evaluation demo guide](docs/DEMO_GUIDE.md) for the exact working scope and click-by-click presentation script.
+Verified digital tourist IDs, location-aware hazard alerts, and an emergency route to authorised responders that still works when the network doesn't.
 
-## What works in the deployed prototype
+</div>
 
-- Sandbox KYC validation: Aadhaar Verhoeff checksum + sandbox OTP, or passport MRZ check digits. This is **not** UIDAI or passport-authority authentication.
-- A signed digital credential with a `did:prahari:` identifier and public verification page.
-- Server-custodied, hash-only credential anchoring on Ethereum Sepolia when the identity registry is configured. No MetaMask or personal wallet is required or connected.
-- Consent-controlled browser GPS telemetry, server-side geofence evaluation, and explainable safety signals. The review score incorporates location history, current geofence type, nearby recent operational incidents, official nearby hazards, time of day, GPS quality, speed, and optional itinerary deviation; it never automatically dispatches responders.
-- Location-matched, official multi-hazard advisories from India’s NDMA SACHET feed (weather, flood, landslide, forest-fire, and other alerts when published). Matches are deliberately labelled approximate because the source exposes a centroid and reported coverage area rather than a guaranteed boundary.
-- Optional onboarding download of an offline regional safety pack: chosen 2–25 km area, nearby tourist places and emergency services, emergency numbers, and safety guidance stored on the device and exported as a JSON backup.
-- GPS-backed SOS creation, durable authority-queue records, and emergency-contact email through Resend when an email contact and provider configuration are present.
-- Direct SOS delivery over Wi-Fi or mobile data to the authenticated authority queue, with browser-local retry when the device is offline. A paired Prahari BLE GATT gateway is an optional no-internet relay only; it is never required for normal use.
-- Police-ready incident-information and missing-person drafts for authorised review; these are explicitly not police/CCTNS filings. The report integrity hash can be anchored when the incident registry is configured.
-- Authenticated authority dashboard with live database records, map markers, responder availability, geofence creation, and a truthful realtime status indicator. If Supabase Broadcast cannot be verified in the browser, it falls back to authenticated 15-second refresh.
-- Authority-only Sarvam AI incident briefs and authenticated, on-demand translations for incident chat. Officers can write in their own language, transmit a translated version in the traveller's preferred language, and translate incoming messages to English while retaining the original.
-- Traveller voice assistance with Sarvam speech-to-text and text-to-speech across 11 Indian languages plus English. Travellers review the transcript before using it in an incident draft or sending a critical voice SOS; selected international languages use a clearly labelled browser-speech and server translation fallback.
-- Emergency identification profiles: a traveller can enter attire details or consent to a current-photo analysis. The application retains only a structured description of visible clothing and possessions—never the uploaded photo—and attaches it to new emergency records for authorised case handling.
+---
 
-## Digital Tourist ID architecture
+## About
 
-The Digital Tourist ID follows consent, accessibility, and trustworthy-public-service principles rather than claiming government issuance or a partnership with the India AI Impact Summit. The traveller can show a full in-app card; its QR code contains only a verification URL and current credential-claim hash. A scan checks the Ed25519-signed credential, expiry/revocation state, and—when configured—the hash-only chain anchor. It does not reveal the holder’s name, nationality, document data, emergency contacts, itinerary, or location. Protected information remains off-chain and is visible only through a signed-in authority case workflow.
+Prahari gives every traveller a signed Digital Tourist ID and a one-tap SOS, and gives authorised staff a single desk to see incidents, publish risk zones and talk to the people who need help.
 
-## Important scope boundaries
+- **Digital Tourist ID** - Sandbox Aadhaar (Verhoeff + OTP) or passport MRZ check, then an Ed25519-signed credential with a `did:prahari:` identifier and a QR code that verifies without revealing personal data.
+- **Blockchain anchoring** - Only the credential hash is anchored on Ethereum Sepolia by a server wallet. No personal data goes on-chain and no traveller wallet is needed.
+- **Safety assessment** - With consent, browser GPS is checked against authority geofences, official NDMA SACHET hazard alerts, nearby incidents, time of day and speed. High scores go to a human for review; nothing is dispatched automatically.
+- **SOS that survives bad signal** - Online, the SOS goes straight to the authority desk and emergency contacts get an email with a map link. Offline, it is saved on the device and retried, and can be handed to a paired nearby phone (WebRTC) or a BLE relay gateway. Relayed packets are signed, so relays can carry them but not alter them.
+- **Live SOS status** - The desk assigns a unit and an ETA, chats with the traveller, and resolves the case; the traveller's SOS card updates as it happens, even after a reload.
+- **Multilingual help** - Sarvam AI speech-to-text, text-to-speech and translation across 11 Indian languages plus English, for travellers and for officer-to-traveller chat.
+- **Case tools for staff** - AI case briefs, missing-person drafts, a clothing-based identification profile (the photo is never stored), and review of traveller incident reports.
+- **Offline safety pack** - Nearby hospitals, police, helplines and guidance for a chosen area, saved on the device.
 
-- The safety engine is explainable, deterministic signal analysis—not a trained ML classifier. It evaluates recent consented location history, configured risk zones, official hazard advisories, nearby operational incident density, local time, GPS quality, unusual speed, and route deviation only when a coordinate route is supplied. High-risk results require human review and never dispatch police automatically.
-- Production records are application data for this demonstration; they are not a connection to police, UIDAI, or government systems.
-- Only hashes/commitments go on-chain. KYC, itinerary, contacts, and location history remain off-chain in the configured database.
-- `DEPLOYER_PRIVATE_KEY` is a server-custodied issuer key, not the wallet a traveller connects in the browser. To anchor publicly, configure the root deployment environment with a funded Sepolia deployer key, `ALCHEMY_SEPOLIA_URL`, and both deployed Sepolia registry addresses. If those values are absent, the app uses only the explicitly configured local chain; `/api/health` identifies the active network and expected chain ID.
-- A Resend `ACCEPTED` status means the email provider accepted the request; it does not prove inbox delivery.
-- The public `tile.openstreetmap.org` service must not be used for offline map downloads. Configure a self-hosted or licensed tile provider that explicitly permits offline caching before enabling offline base-map tiles; the safety-pack data works without that optional provider.
-- Offline SOS can be retained in the browser and retried after reconnection. True cross-device BLE relay is optional and requires a paired native/hardware Prahari GATT gateway; a web browser cannot advertise as a BLE peripheral. See the [optional relay setup](docs/BLE_OPTIONAL_RELAY.md) and [gateway protocol](docs/ble-relay-gateway-protocol.md).
-- A browser GATT write proves only that the paired gateway accepted a packet. It is not an authority or emergency-service delivery receipt. The `/api/health` response reports whether the gateway’s server-side uplink key is configured.
+> Prahari is a prototype built for Smart India Hackathon 2026. It is not a government service and is not connected to police, UIDAI or 112. Identity checks are sandboxed.
 
-## Workspace layout
+## Screenshots
 
-```text
-apps/web/             Next.js traveller and authority application
-packages/contracts/   Solidity contracts and Hardhat deployment scripts
-supabase/             schema and additive migration SQL
+|                                                                                                                   |                                                                                                              |
+| :---------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------: |
+|                 <img src="docs/screenshots/landing.webp" width="100%" /><br><sub>Landing page</sub>                 |   <img src="docs/screenshots/credential-issued.webp" width="100%" /><br><sub>Digital Tourist ID issued</sub>   |
+| <img src="docs/screenshots/traveller-dashboard.webp" width="100%" /><br><sub>Traveller dashboard - safety score, SOS, hazard alerts</sub> | <img src="docs/screenshots/traveller-sos.webp" width="100%" /><br><sub>Live SOS status - unit assigned, chat with the desk</sub> |
+|   <img src="docs/screenshots/authority-desk.webp" width="100%" /><br><sub>Authority desk - map and incident queue</sub>   |  <img src="docs/screenshots/incident-review.webp" width="100%" /><br><sub>Incident review - assign help, reply, AI tools</sub>  |
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A[Traveller] --> B[Sandbox KYC - Aadhaar or passport MRZ]
+    B --> C[Signed Digital Tourist ID]
+    C -->|credential hash| D[Ethereum Sepolia registry]
+    A -->|consented GPS| E[Safety engine]
+    E --> F[Geofences + NDMA SACHET alerts]
+    A -->|SOS| G{Online?}
+    G -->|yes| H[Authority desk]
+    G -->|no| I[Device queue / nearby phone / BLE gateway]
+    I -->|when a network returns| H
+    H --> J[Sarvam AI - briefs, translation, voice]
+    H --> K[Supabase - incidents, travellers, geofences]
 ```
 
-## Local development
+---
+
+## Tech Stack
+
+| Layer             | Technology                                       |
+| :---------------- | :----------------------------------------------- |
+| Framework         | Next.js 15 (App Router), React 19, Tailwind CSS  |
+| Database          | Supabase (PostgreSQL, Realtime)                  |
+| Identity          | Ed25519 credentials, Solidity registries (Hardhat, Sepolia) |
+| AI                | Sarvam AI (translation, briefs, speech), OpenAI (clothing profile) |
+| Maps and hazards  | Leaflet + OpenStreetMap, NDMA SACHET feed        |
+| Offline delivery  | IndexedDB queue, WebRTC data channels, Web Bluetooth |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22+ and pnpm
+- Optional: a [Supabase](https://supabase.com/) project, a [Sarvam AI](https://www.sarvam.ai/) key, and a Sepolia RPC URL
+
+### Setup
 
 ```bash
+git clone https://github.com/Arav-Arun/Prahari.git
+cd Prahari
 pnpm install
-pnpm dev:web
-# Visit http://localhost:3000
+cp .env.example apps/web/.env.local
+pnpm identity:keygen
 ```
 
-Copy the relevant environment variables into `apps/web/.env.local`. Never place `ANCHOR_PRIVATE_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in browser-exposed `NEXT_PUBLIC_*` variables.
-
-Before deployment, apply the additive SQL files in `supabase/migrations/` in numeric order. The emergency-contact, emergency profile, relay provenance, missing-person draft, durable incident chat, recovery-code, and authority-geofence flows require migrations `005` through `012`; `/api/health` reports exact missing tables or columns as `degraded` until they are present.
-
-## Key environment variables
-
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- Local Hardhat: `CHAIN_RPC_URL`, `IDENTITY_REGISTRY_ADDRESS`, `ANCHOR_PRIVATE_KEY`
-- Sepolia: `ALCHEMY_SEPOLIA_URL`, `DEPLOYER_PRIVATE_KEY`,
-  `SEPOLIA_IDENTITY_REGISTRY_ADDRESS`, and `SEPOLIA_INCIDENT_REGISTRY_ADDRESS`
-- `RESEND_API_KEY`, `EMERGENCY_FROM_EMAIL` for emergency-contact email
-- `HAZARD_ALERT_CACHE_TTL_MS` (optional; default 300000) for the NDMA SACHET feed cache
-- `NEXT_PUBLIC_OFFLINE_TILE_TEMPLATE`, `NEXT_PUBLIC_OFFLINE_TILE_ATTRIBUTION` only for an approved offline-capable base-map provider
-- `SARVAM_API_KEY` for Indic/English translation, AI-assisted authority briefs, voice transcription, and voice playback; optional `SARVAM_CHAT_MODEL=sarvam-105b`, `SARVAM_STT_MODEL=saaras:v3`, `SARVAM_TTS_MODEL=bulbul:v3`
-- `OPENAI_API_KEY` for emergency-identification photo analysis and the selected international translation fallback; optional `OPENAI_VISION_MODEL` and `OPENAI_TEXT_MODEL`
-- `PRAHARI_MESH_GATEWAY_KEY` for the native/hardware BLE gateway’s authenticated uplink. It must never appear in browser code or device-advertised data.
-
-## Account provisioning and recovery
-
-Identity issuance displays a one-time traveller recovery code. Store it safely: an ID or DID by itself cannot sign a traveller in. Authority and administrator accounts are not pre-seeded; provision a password-hashed record in the protected `users` table through your approved administration process before using the authority dashboard.
-
-## Contract commands
+Paste the generated `IDENTITY_SIGNING_KEY` and a random `SESSION_SECRET` into `apps/web/.env.local`, then:
 
 ```bash
+pnpm dev
+```
+
+Open [localhost:3000](http://localhost:3000).
+
+Without Supabase configured, the app runs on in-memory records, so you can try every flow locally. To persist data, run `supabase/schema.sql` in the Supabase SQL editor. `GET /api/health` reports what is configured.
+
+### Optional services
+
+Each of these switches on one feature; the rest of the app works without it. See [`.env.example`](.env.example) for every variable.
+
+| Feature                         | Variables                                                                  |
+| :------------------------------ | :------------------------------------------------------------------------- |
+| Durable storage and live updates | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_REALTIME_JWT_SECRET` |
+| Emergency-contact email         | `RESEND_API_KEY`, `EMERGENCY_FROM_EMAIL`                                   |
+| Translation, voice, case briefs | `SARVAM_API_KEY`                                                           |
+| Clothing profile from a photo   | `OPENAI_API_KEY`                                                           |
+| Credential anchoring on Sepolia | `ALCHEMY_SEPOLIA_URL`, `DEPLOYER_PRIVATE_KEY`, `SEPOLIA_*_REGISTRY_ADDRESS` |
+| BLE relay gateway               | `PRAHARI_MESH_GATEWAY_KEY` (see [tools/ble-gateway](tools/ble-gateway/README.md)) |
+
+### Accounts
+
+Travellers create their own ID at `/onboarding`; the passport path has a "Generate an ICAO specimen passport" button for testing.
+
+In development, the sign-in page has **Authority** and **Responder** buttons for built-in demo staff accounts (password `Prahari@123`). A production build hides them unless `NEXT_PUBLIC_DEMO_ACCOUNTS=true`. For real staff, run `pnpm staff:create <email> "<name>" authority` and paste the printed SQL into Supabase.
+
+### Scripts
+
+```bash
+pnpm test                       # unit tests (credentials, safety engine, SOS mesh)
+pnpm lint
+pnpm mesh:demo                  # walks a signed SOS across two relays in the terminal
+pnpm staff:create               # prints SQL for a staff account
 pnpm contract:compile
 pnpm contract:deploy:sepolia
 ```
 
-`packages/contracts/deployments/sepolia.json` records the current deployment addresses. The deployment script refuses any public network other than Sepolia.
+---
+
+## Project Structure
+
+```
+apps/web/
+├── app/
+│   ├── api/              Route handlers: auth, KYC, identity, incidents, locations, geofences, chat, AI
+│   ├── authority/        Authority desk
+│   ├── citizen/          Traveller dashboard
+│   ├── onboarding/       Identity verification and ID issue
+│   ├── login/            Sign-in
+│   └── verify/[did]/     Public credential check
+├── components/           authority/, tourist/, maps/, offline/
+└── lib/
+    ├── auth/             Sessions and route guards
+    ├── identity/ kyc/    Credentials, DIDs, Aadhaar and MRZ checks
+    ├── blockchain/       Sepolia anchoring
+    ├── services/         Hazards, notifications, translation, drafts
+    └── sos-mesh/         Signed SOS packets, offline queue, WebRTC and BLE transports
+
+packages/contracts/       Identity and incident registries (Solidity) and deploy script
+supabase/schema.sql       Database schema
+tools/ble-gateway/        Optional Raspberry Pi BLE relay
+scripts/                  Key generation, staff accounts and the mesh demo
+```

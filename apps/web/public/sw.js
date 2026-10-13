@@ -1,35 +1,23 @@
 /**
- * Prahari Tourist Safety — Progressive Web App (PWA) Service Worker
- * 
- * Caches offline HTML, CSS, JavaScript, icons, and Leaflet assets
- * so the application opens, functions, and dispatches offline SOS packets
- * even when internet connectivity is completely unavailable.
+ * Prahari service worker. Network-first for pages and assets with a cache
+ * fallback, so a traveller dashboard opened once still opens offline. Signed-in
+ * pages are cached when visited, never precached, so a login redirect is not
+ * stored in their place.
  */
 
-const CACHE_NAME = 'prahari-pwa-v2';
+const CACHE_NAME = 'prahari-pwa-v4';
 const OFFLINE_MAP_CACHE_NAME = 'prahari-offline-map-v1';
 
-const STATIC_ASSETS = [
-  '/',
-  '/citizen',
-  '/admin',
-  '/login',
-  '/manifest.json',
-];
+const STATIC_ASSETS = ['/', '/login', '/manifest.json', '/icon-192.png'];
 
-// Install Event: Cache Core Shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[PWA SW] Pre-caching offline application shell...');
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('[PWA SW] Partial cache warning during install:', err);
-      });
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(STATIC_ASSETS).catch(() => undefined))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate Event: Clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -42,39 +30,30 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event: Network-First with Cache Fallback for HTML/Navigations, Cache-First for static assets
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Skip non-GET requests or browser extension requests
-  if (request.method !== 'GET' || !url.protocol.startsWith('http')) {
-    return;
-  }
-
-  // Bypass API calls to let network/IndexedDB offline queue handle them
-  if (url.pathname.startsWith('/api/')) {
+  // API calls go straight to the network; the SOS queue handles failures.
+  if (request.method !== 'GET' || !url.protocol.startsWith('http') || url.pathname.startsWith('/api/')) {
     return;
   }
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       try {
-        // Try network first
         const networkResponse = await fetch(request);
-        if (networkResponse && networkResponse.status === 200) {
+        if (networkResponse.status === 200 && !networkResponse.redirected) {
           cache.put(request, networkResponse.clone());
         }
         return networkResponse;
       } catch (err) {
-        // Fallback to cache if network fails (OFFLINE MODE)
         const offlineMapCache = await caches.open(OFFLINE_MAP_CACHE_NAME);
         const cachedResponse = await cache.match(request) || await offlineMapCache.match(request);
         if (cachedResponse) {
           return cachedResponse;
         }
 
-        // Fallback for navigation requests to cached /citizen page
         if (request.mode === 'navigate') {
           const fallbackPage = await cache.match('/citizen') || await cache.match('/');
           if (fallbackPage) return fallbackPage;

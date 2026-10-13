@@ -6,7 +6,7 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const globalForSupabase = globalThis as unknown as { supabase?: SupabaseClient | null };
 
 /** Tables required for the application to use durable storage safely. */
-export const REQUIRED_SUPABASE_TABLES = [
+const REQUIRED_SUPABASE_TABLES = [
   "tourists",
   "locations",
   "geofences",
@@ -17,8 +17,8 @@ export const REQUIRED_SUPABASE_TABLES = [
   "credential_issuance",
 ] as const;
 
-/** Columns introduced by the durable emergency/identity feature migrations. */
-export const REQUIRED_SUPABASE_COLUMNS: Record<string, readonly string[]> = {
+/** Newer columns an older database may be missing (see supabase/schema.sql). */
+const REQUIRED_SUPABASE_COLUMNS: Record<string, readonly string[]> = {
   tourists: ['clothingProfile', 'touristAccessCodeHash', 'touristAccessCodeSalt', 'meshPubkeys'],
   incidents: [
     'emergencyContactNotifications',
@@ -41,7 +41,7 @@ export const REQUIRED_SUPABASE_COLUMNS: Record<string, readonly string[]> = {
   ],
 };
 
-export type DatabaseReadiness = {
+type DatabaseReadiness = {
   provider: "supabase";
   projectHost: string | null;
   configured: boolean;

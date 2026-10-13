@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       // so say which one instead of a bare 500.
       return NextResponse.json({
         success: false,
-        error: 'Could not save the mesh device key. If the tourists.meshPubkeys column is missing, apply supabase/migrations/012_mesh_identity.sql — /api/health lists any outstanding columns.',
+        error: 'Could not save the mesh device key. If the tourists.meshPubkeys column is missing, add it from supabase/schema.sql — /api/health lists any outstanding columns.',
       }, { status: 503 });
     }
 

@@ -50,7 +50,7 @@ export function deriveDid(subjectHash: string): string {
   return `did:prahari:${base58(digest.subarray(0, 20))}`;
 }
 
-export interface DidDocument {
+interface DidDocument {
   '@context': string[];
   id: string;
   controller: string;

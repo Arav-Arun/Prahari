@@ -18,15 +18,15 @@ import { fromNostrSOSEvent, verifyNostrSOSEvent, type SOSPacket } from './sosPac
 export const MESH_PUBKEY_FIELD = 'meshPubkeys';
 
 /** One traveller may carry a handful of devices; beyond that, oldest is evicted. */
-export const MAX_MESH_KEYS_PER_TOURIST = 5;
+const MAX_MESH_KEYS_PER_TOURIST = 5;
 
 /** Events older than this are refused even if the signature is good. */
-export const MESH_EVENT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const MESH_EVENT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /** Tolerance for a relaying device with a slightly fast clock. */
-export const MESH_EVENT_MAX_SKEW_MS = 5 * 60 * 1000;
+const MESH_EVENT_MAX_SKEW_MS = 5 * 60 * 1000;
 
-export type MeshTrustVerdict =
+type MeshTrustVerdict =
   | { trusted: true; packet: SOSPacket }
   | { trusted: false; reason: string };
 

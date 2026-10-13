@@ -1,17 +1,17 @@
 node_modules
 .pnpm-store
 .next
+.vercel
 dist
 coverage
-.env
-.env.local
 *.log
-__pycache__
-.venv
+*.tsbuildinfo
+.env*
+!.env.example
+
+# Hardhat
 artifacts
 cache
 typechain-types
-tmp
-*.tsbuildinfo
-.vercel
+
 supabase/.temp

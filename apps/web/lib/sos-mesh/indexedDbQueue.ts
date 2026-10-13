@@ -59,7 +59,7 @@ function getDB(): Promise<IDBDatabase | null> {
   return dbPromise;
 }
 
-export interface QueuedPacketRecord {
+interface QueuedPacketRecord {
   packetId: string;
   packet: SOSPacket;
   status: 'QUEUED' | 'RELAYED' | 'DELIVERED' | 'EXPIRED' | 'CANCELLED';

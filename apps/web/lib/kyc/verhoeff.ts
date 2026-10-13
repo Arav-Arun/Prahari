@@ -36,7 +36,7 @@ const P = [
 const INV = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9];
 
 /** True when the digit string carries a valid Verhoeff check digit. */
-export function verhoeffValidate(digits: string): boolean {
+function verhoeffValidate(digits: string): boolean {
   if (!/^\d+$/.test(digits)) return false;
   let c = 0;
   const reversed = digits.split('').reverse();
@@ -51,7 +51,7 @@ export function verhoeffValidate(digits: string): boolean {
  * verhoeffValidate, with the permutation index shifted by one because the
  * check digit will occupy position 0 of the reversed string.
  */
-export function verhoeffCheckDigit(digits: string): number {
+function verhoeffCheckDigit(digits: string): number {
   if (!/^\d+$/.test(digits)) return -1;
   let c = 0;
   const reversed = digits.split('').reverse();
@@ -78,7 +78,7 @@ export function generateSandboxAadhaar(): string {
   return body + String(verhoeffCheckDigit(body));
 }
 
-export type AadhaarValidation =
+type AadhaarValidation =
   | { valid: true; masked: string }
   | { valid: false; reason: string };
 

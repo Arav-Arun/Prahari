@@ -36,7 +36,7 @@ function text(value: unknown) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
-export function isFixtureTourist(record: Record<string, any>) {
+function isFixtureTourist(record: Record<string, any>) {
   const touristId = String(record.touristId ?? '').trim().toUpperCase();
   const name = String(record.name ?? '').trim().toLowerCase();
   return FIXTURE_TOURIST_IDS.has(touristId)
@@ -52,11 +52,11 @@ export function isFixtureIncident(record: Record<string, any>) {
     || incidentId.startsWith('BLOCKCHAIN-E2E-');
 }
 
-export function isFixtureGeofence(record: Record<string, any>) {
+function isFixtureGeofence(record: Record<string, any>) {
   return FIXTURE_GEOFENCE_NAMES.has(text(record.name));
 }
 
-export function isFixtureResponder(record: Record<string, any>) {
+function isFixtureResponder(record: Record<string, any>) {
   return [record.responderId, record.unitId]
     .map((value) => String(value ?? '').trim().toUpperCase())
     .some((value) => FIXTURE_RESPONDER_IDS.has(value));

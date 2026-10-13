@@ -39,7 +39,7 @@ export function readOfflineMapPack(): OfflineMapPack | null {
   }
 }
 
-export function saveOfflineMapPack(pack: OfflineMapPack) {
+function saveOfflineMapPack(pack: OfflineMapPack) {
   if (typeof window === 'undefined') return false;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(pack));

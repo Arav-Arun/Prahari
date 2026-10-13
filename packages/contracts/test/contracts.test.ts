@@ -9,8 +9,6 @@ describe("Tourist Safety Platform Smart Contracts", function () {
 
   let incidentRegistry: any;
   let touristIdentityRegistry: any;
-  let geofenceRegistry: any;
-  let responderRegistry: any;
 
   beforeEach(async function () {
     [admin, responder, auditor, user] = await ethers.getSigners();
@@ -24,16 +22,6 @@ describe("Tourist Safety Platform Smart Contracts", function () {
     const IdentityFactory = await ethers.getContractFactory("TouristIdentityRegistry");
     touristIdentityRegistry = await IdentityFactory.deploy(admin.address);
     await touristIdentityRegistry.waitForDeployment();
-
-    // Deploy GeofenceRegistry
-    const GeofenceFactory = await ethers.getContractFactory("GeofenceRegistry");
-    geofenceRegistry = await GeofenceFactory.deploy(admin.address);
-    await geofenceRegistry.waitForDeployment();
-
-    // Deploy ResponderRegistry
-    const ResponderFactory = await ethers.getContractFactory("ResponderRegistry");
-    responderRegistry = await ResponderFactory.deploy(admin.address);
-    await responderRegistry.waitForDeployment();
   });
 
   describe("IncidentRegistry", function () {
@@ -98,39 +86,6 @@ describe("Tourist Safety Platform Smart Contracts", function () {
       const [isValid, state] = await touristIdentityRegistry.verifyCredential(credHash);
       expect(isValid).to.be.false;
       expect(state).to.equal(3); // Revoked
-    });
-  });
-
-  describe("GeofenceRegistry", function () {
-    it("should register and toggle geofences", async function () {
-      const gKey = ethers.keccak256(ethers.toUtf8Bytes("GEO-JAIPUR-RESTRICTED"));
-      const gHash = ethers.keccak256(ethers.toUtf8Bytes("polygon:coordinates:..."));
-      const nameHash = ethers.keccak256(ethers.toUtf8Bytes("Amer Fort High Risk Zone"));
-
-      await geofenceRegistry.registerGeofence(gKey, gHash, nameHash, 2); // High severity
-      expect(await geofenceRegistry.totalGeofences()).to.equal(1);
-
-      const record = await geofenceRegistry.getGeofence(gKey);
-      expect(record.active).to.be.true;
-
-      await geofenceRegistry.setGeofenceActive(gKey, false);
-      const updatedRecord = await geofenceRegistry.getGeofence(gKey);
-      expect(updatedRecord.active).to.be.false;
-    });
-  });
-
-  describe("ResponderRegistry", function () {
-    it("should register emergency responder unit and verify wallet address", async function () {
-      const responderKey = ethers.keccak256(ethers.toUtf8Bytes("RESP-POLICE-01"));
-      const badgeHash = ethers.keccak256(ethers.toUtf8Bytes("BADGE-7890"));
-      const deptHash = ethers.keccak256(ethers.toUtf8Bytes("Jaipur City Police"));
-
-      await responderRegistry.registerResponder(responderKey, badgeHash, deptHash, responder.address);
-
-      const [isVerified, key, status] = await responderRegistry.verifyResponderAddress(responder.address);
-      expect(isVerified).to.be.true;
-      expect(key).to.equal(responderKey);
-      expect(status).to.equal(0); // Available
     });
   });
 });

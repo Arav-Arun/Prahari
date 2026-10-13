@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { kycProvider } from "@/lib/kyc/sandboxProvider";
 import { issueCredential } from "@/lib/identity/credential";
 import {
-  upsertTourist, getTouristBySubjectHash, logCredentialIssuance, updateTourist, isSupabaseConfigured,
+  upsertTourist, getTourist, getTouristBySubjectHash, logCredentialIssuance, updateTourist, isSupabaseConfigured,
 } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth/session";
 import { anchorCredential } from "@/lib/blockchain/registry";
@@ -12,10 +12,18 @@ import { randomBytes } from 'node:crypto';
 
 export const dynamic = "force-dynamic";
 
-/** Stable, human-readable tourist id: DTI-<ISO3>-<6 digits>. */
-function makeTouristId(nationalityCode: string, subjectHash: string): string {
-  const n = parseInt(subjectHash.slice(0, 8), 16) % 1_000_000;
-  return `DTI-${nationalityCode}-${String(n).padStart(6, "0")}`;
+/**
+ * Human-readable tourist id, DTI-<ISO3>-<6 digits>, derived from the document
+ * hash. Six digits can collide, so later slices of the hash are tried until the
+ * id is unused; otherwise a second traveller would overwrite the first.
+ */
+async function allocateTouristId(nationalityCode: string, subjectHash: string): Promise<string> {
+  for (let offset = 0; offset + 8 <= subjectHash.length; offset += 8) {
+    const n = parseInt(subjectHash.slice(offset, offset + 8), 16) % 1_000_000;
+    const touristId = `DTI-${nationalityCode}-${String(n).padStart(6, "0")}`;
+    if (!(await getTourist(touristId))) return touristId;
+  }
+  throw new Error("Could not allocate a tourist ID. Please try again.");
 }
 
 export async function POST(request: NextRequest) {
@@ -49,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // Same document -> same DID. Re-enrolment updates rather than duplicates.
     const existing = await getTouristBySubjectHash(subject.subjectHash);
-    const touristId = existing?.touristId ?? makeTouristId(subject.nationalityCode, subject.subjectHash);
+    const touristId = existing?.touristId ?? await allocateTouristId(subject.nationalityCode, subject.subjectHash);
 
     // Re-enrolment overwrites the record this document already points at —
     // its name, DID, credential and recovery code. Presenting the document is
