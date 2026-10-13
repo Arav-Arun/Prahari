@@ -100,7 +100,7 @@ function LoginForm() {
                 </label>
                 <label className="block text-sm font-medium">
                   Recovery code
-                  <input required type="password" value={recoveryCode} onChange={(e) => setRecoveryCode(e.target.value)} placeholder="Shown once when your ID was issued" className="nb-input mt-1.5 font-mono text-sm" />
+                  <input required type="password" value={recoveryCode} onChange={(e) => setRecoveryCode(e.target.value)} placeholder="From when your ID was issued" className="nb-input mt-1.5 font-mono text-sm" />
                 </label>
                 <button type="submit" disabled={loading} className="minimal-button minimal-button-primary w-full">
                   {loading && <Loader2 className="size-4 animate-spin" />} Sign in

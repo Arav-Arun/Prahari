@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 type PrahariLiveHandlers = {
   onConnectionChange?: (connected: boolean) => void;
@@ -26,7 +26,7 @@ export function subscribeToPrahariLive(
     return () => {};
   }
 
-  let client: ReturnType<typeof createClient> | null = null;
+  let client: SupabaseClient | null = null;
   let channel: RealtimeChannel | null = null;
   let cancelled = false;
 
@@ -43,6 +43,9 @@ export function subscribeToPrahariLive(
         return;
       }
 
+      // Loaded only when Realtime is configured, keeping it out of the page bundle.
+      const { createClient } = await import("@supabase/supabase-js");
+      if (cancelled) return;
       client = createClient(projectUrl, publishableKey, {
         auth: { persistSession: false, autoRefreshToken: false },
       });

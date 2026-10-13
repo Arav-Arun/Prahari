@@ -20,6 +20,9 @@ interface SosButtonProps {
 // Geofence and safety-signal incidents are raised automatically; anything else
 // for this traveller is an SOS they sent.
 const AUTOMATIC_INCIDENT_TYPES = new Set(['GEOFENCE_BREACH', 'SAFETY_SIGNAL']);
+// Long enough to cancel an accidental press, short enough not to cost time.
+const SOS_COUNTDOWN_SECONDS = 3;
+
 const isClosed = (status: unknown) => ['RESOLVED', 'CANCELLED'].includes(String(status ?? '').toUpperCase());
 /** True once the incident is recorded on the server, not just queued or relayed. */
 const isDelivered = (incident: any) => Boolean(incident?.delivered ?? incident?.transportType === 'INTERNET');
@@ -27,6 +30,8 @@ const isDelivered = (incident: any) => Boolean(incident?.delivered ?? incident?.
 export default function SosButton({ touristPos, touristId, activeSos, onActiveSosChange }: SosButtonProps) {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownTimer = useRef<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [bleStatus, setBleStatus] = useState({ supported: false, paired: false, gatewayName: null as string | null });
   const [pairingBle, setPairingBle] = useState(false);
@@ -153,7 +158,7 @@ export default function SosButton({ touristPos, touristId, activeSos, onActiveSo
     }
   };
 
-  const handleSosClick = async () => {
+  const sendSos = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -228,6 +233,30 @@ export default function SosButton({ touristPos, touristId, activeSos, onActiveSo
     }
   };
 
+  const stopCountdown = () => {
+    if (countdownTimer.current !== null) window.clearInterval(countdownTimer.current);
+    countdownTimer.current = null;
+    setCountdown(null);
+  };
+
+  const startCountdown = () => {
+    let remaining = SOS_COUNTDOWN_SECONDS;
+    setCountdown(remaining);
+    countdownTimer.current = window.setInterval(() => {
+      remaining -= 1;
+      if (remaining > 0) {
+        setCountdown(remaining);
+        return;
+      }
+      stopCountdown();
+      void sendSos();
+    }, 1000);
+  };
+
+  useEffect(() => () => {
+    if (countdownTimer.current !== null) window.clearInterval(countdownTimer.current);
+  }, []);
+
   const cancelSos = async () => {
     if (!activeSos || loading) return;
     const wasDelivered = isDelivered(activeSos);
@@ -291,15 +320,15 @@ export default function SosButton({ touristPos, touristId, activeSos, onActiveSo
             </span>
             <span className="font-mono text-xs text-ink-soft">{activeSos.incidentId}</span>
           </div>
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+          <dl className="mt-4 divide-y divide-line rounded-lg border border-line bg-surface text-sm">
             {[
               ['Responder', responder || 'Not assigned yet'],
               ['Arrival', activeSos.etaMinutes != null ? `~${activeSos.etaMinutes} min` : 'Not available'],
               ['Location', typeof activeSos.location?.lat === 'number' ? `${activeSos.location.lat.toFixed(4)}, ${activeSos.location.lng.toFixed(4)}` : 'Not available'],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-line bg-surface p-3">
-                <dt className="text-xs text-ink-soft">{label}</dt>
-                <dd className="mt-1 font-medium">{value}</dd>
+              <div key={label} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                <dt className="text-ink-soft">{label}</dt>
+                <dd className="text-right font-medium">{value}</dd>
               </div>
             ))}
           </dl>
@@ -330,12 +359,12 @@ export default function SosButton({ touristPos, touristId, activeSos, onActiveSo
         <div className="mt-5">
           {notice && <p className="mb-3 text-sm text-success">{notice}</p>}
           <button
-            onClick={handleSosClick}
+            onClick={countdown === null ? startCountdown : stopCountdown}
             disabled={loading || !canDispatch}
             className="minimal-button minimal-button-danger w-full py-4 text-base"
           >
             {loading ? <Loader2 className="size-5 animate-spin" /> : <Siren className="size-5" />}
-            {loading ? 'Sending…' : 'Send SOS'}
+            {loading ? 'Sending…' : countdown !== null ? `Sending in ${countdown}… tap to cancel` : 'Send SOS'}
           </button>
           {!canDispatch && <p className="mt-2 text-center text-xs text-ink-soft">Verify your identity before sending an SOS.</p>}
         </div>

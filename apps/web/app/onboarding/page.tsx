@@ -351,26 +351,30 @@ export default function OnboardingPage() {
               <CheckCircle2 size={17} /> Identity verified{fullName ? ` — ${fullName}` : ''}
             </div>
 
-            <h2 className="pt-1 font-bold">Emergency contact <span className="font-normal text-ink-soft">(optional)</span></h2>
-            <label className="block text-sm font-semibold">Preferred authority communication language
+            <label className="block pt-1 text-sm font-semibold">Language for messages with the authority desk
               <select value={communicationLanguage} onChange={(event) => setCommunicationLanguage(event.target.value)} className="nb-input mt-1 text-sm font-normal">
                 {COMMUNICATION_LANGUAGES.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}
               </select>
-              <span className="mt-1 block text-xs font-normal text-ink-soft">Used to prepare translated emergency messages for the authority desk. You can still type in another language during an SOS.</span>
+              <span className="mt-1 block text-xs font-normal text-ink-soft">Officers&apos; replies are translated into it. You can still write in any language during an SOS.</span>
             </label>
+
+            <h2 className="pt-1 font-bold">Emergency contact <span className="font-normal text-ink-soft">(optional)</span></h2>
+            <p className="-mt-2 text-xs text-ink-soft">If you add an email, they are alerted with your location when you send an SOS.</p>
             <div className="grid gap-3 sm:grid-cols-3">
-              <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Contact name"
+              <input aria-label="Contact name" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Contact name"
                 className="nb-input text-sm" />
-              <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+91 98765 43210"
+              <input aria-label="Contact phone" type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+91 98765 43210"
                 className="nb-input text-sm" />
-              <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="contact@example.com"
+              <input aria-label="Contact email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="contact@example.com"
                 className="nb-input text-sm" />
             </div>
-            <input value={hotel} onChange={(e) => setHotel(e.target.value)} placeholder="Accommodation (optional)"
+
+            <h2 className="pt-1 font-bold">Trip</h2>
+            <input aria-label="Accommodation" value={hotel} onChange={(e) => setHotel(e.target.value)} placeholder="Where you are staying (optional)"
               className="nb-input text-sm" />
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
-              <input value={itinerarySummary} onChange={(e) => setItinerarySummary(e.target.value)}
-                placeholder="Planned itinerary or destinations (optional)" className="nb-input text-sm" />
+              <input aria-label="Itinerary" value={itinerarySummary} onChange={(e) => setItinerarySummary(e.target.value)}
+                placeholder="Places you plan to visit (optional)" className="nb-input text-sm" />
               <label className="text-xs font-semibold text-ink-soft">
                 Visit ends
                 <input type="date" value={visitEndDate} min={new Date().toISOString().slice(0, 10)}
@@ -522,7 +526,7 @@ export default function OnboardingPage() {
 
       <aside className="onboarding-visual" role="img" aria-label="A sunlit mountain trail with a safety beacon">
         <div className="onboarding-visual-copy">
-          <h1>A safer path begins before you arrive.</h1>
+          <p>A safer path begins before you arrive.</p>
         </div>
       </aside>
     </main>

@@ -213,7 +213,7 @@
   }
   .onboarding-visual::after { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(6, 22, 37, 0.02) 38%, rgba(6, 22, 37, 0.62) 100%); content: ''; pointer-events: none; }
   .onboarding-visual-copy { position: absolute; z-index: 1; right: clamp(1.5rem, 3vw, 3.5rem); bottom: clamp(2rem, 5vw, 4.5rem); left: clamp(1.5rem, 3vw, 3.5rem); color: #fff; }
-  .onboarding-visual-copy h1 { max-width: 30rem; font-family: var(--font-display); font-size: clamp(2rem, 3.1vw, 3.6rem); font-weight: 500; line-height: 0.98; letter-spacing: -0.055em; }
+  .onboarding-visual-copy p { max-width: 30rem; font-family: var(--font-display); font-size: clamp(2rem, 3.1vw, 3.6rem); font-weight: 500; line-height: 0.98; letter-spacing: -0.055em; }
 
   @media (max-width: 760px) {
     .onboarding-page { display: block; }
@@ -224,6 +224,6 @@
     .onboarding-progress-marker { width: 1.6rem; height: 1.6rem; font-size: 0.65rem; }
     .onboarding-content { padding: 2.25rem 1.25rem 2.5rem; }
     .onboarding-demo-note { padding: 1rem 1.25rem 1.35rem; }
-    .onboarding-visual { position: relative; height: 25rem; }
+    .onboarding-visual { display: none; }
   }
 }

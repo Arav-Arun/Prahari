@@ -148,6 +148,14 @@ export default function CitizenPage() {
     };
   }, []);
 
+  // Escape closes whichever dialog is open.
+  useEffect(() => {
+    if (activeModal === 'none') return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setActiveModal('none'); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeModal]);
+
   // Keep report review status current.
   useEffect(() => {
     if (!touristId) return;
@@ -352,42 +360,42 @@ export default function CitizenPage() {
             You&apos;re offline. An SOS will be saved on this phone and sent as soon as you reconnect. For immediate help, call 112.
           </p>
         )}
-        <div className="grid gap-5 lg:grid-cols-3">
-          <section className="minimal-card lg:col-span-2">
-            <p className="text-xs font-medium text-ink-soft">{tourist ? `Digital ID · ${tourist.touristId}` : 'Loading your ID…'}</p>
-            <h1 className="ui-display mt-2 text-3xl">{tourist ? `${greetingForNow()}, ${tourist.name}` : 'Welcome'}</h1>
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm text-ink-soft">
-              <span className="flex items-center gap-2">
-                <MapPin className="size-4" />
-                {coords ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : locationConsent ? 'Waiting for your location' : 'Location sharing is off'}
-              </span>
-              <button
-                onClick={toggleLocationConsent}
-                disabled={!touristId}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                  locationConsent ? 'border-emerald-600/25 bg-emerald-50 text-emerald-800' : 'border-line bg-surface-2 text-ink-soft'
-                }`}
-              >
-                Location sharing: {locationConsent ? 'On' : 'Off'}
-              </button>
+        <section className="minimal-card">
+          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-ink-soft">{tourist ? `Digital ID · ${tourist.touristId}` : 'Loading your ID…'}</p>
+              <h1 className="ui-display mt-2 text-2xl sm:text-3xl">{tourist ? `${greetingForNow()}, ${tourist.name}` : 'Welcome'}</h1>
             </div>
-            {locationError && <p role="alert" className="mt-3 text-sm text-danger">{locationError}</p>}
-            {safetyAlert && <p role="status" className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm">{safetyAlert}</p>}
-          </section>
-
-          <section className="minimal-card flex flex-col">
-            <p className="text-xs font-medium text-ink-soft">Safety status</p>
-            <p className="mt-3 text-4xl font-semibold tracking-tight">
-              {liveSafetyRisk?.score ?? '—'}<span className="ml-1 text-sm font-normal text-ink-soft">/ 100</span>
-            </p>
-            {risk && <span className={`mt-2 w-fit rounded-full border px-2.5 py-0.5 text-xs font-semibold ${risk.className}`}>{risk.label} risk</span>}
-            <p className="mt-auto pt-4 text-sm leading-6 text-ink-soft">
-              {liveSafetyRisk
-                ? liveSafetyRisk.signals?.[0]?.message ?? 'Nothing flagged at your location right now.'
-                : coords ? 'Assessing your latest location…' : 'Share your location to get a safety assessment.'}
-            </p>
-          </section>
-        </div>
+            <div className="flex items-center gap-3">
+              <p className="text-3xl font-semibold tracking-tight">
+                {liveSafetyRisk?.score ?? '—'}<span className="ml-1 text-sm font-normal text-ink-soft">/ 100</span>
+              </p>
+              {risk && <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${risk.className}`}>{risk.label} risk</span>}
+            </div>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-ink-soft">
+            {liveSafetyRisk
+              ? liveSafetyRisk.signals?.[0]?.message ?? 'Nothing flagged at your location right now.'
+              : coords ? 'Assessing your latest location…' : 'Share your location to get a safety assessment.'}
+          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm text-ink-soft">
+            <span className="flex items-center gap-2">
+              <MapPin className="size-4" />
+              {coords ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : locationConsent ? 'Waiting for your location' : 'Location sharing is off'}
+            </span>
+            <button
+              onClick={toggleLocationConsent}
+              disabled={!touristId}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                locationConsent ? 'border-emerald-600/25 bg-emerald-50 text-emerald-800' : 'border-line bg-surface-2 text-ink-soft'
+              }`}
+            >
+              Location sharing: {locationConsent ? 'On' : 'Off'}
+            </button>
+          </div>
+          {locationError && <p role="alert" className="mt-3 text-sm text-danger">{locationError}</p>}
+          {safetyAlert && <p role="status" className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm">{safetyAlert}</p>}
+        </section>
 
         <SosButton
           touristPos={coords ?? undefined}
@@ -557,7 +565,7 @@ export default function CitizenPage() {
                 </div>
               ) : (
                 <form className="space-y-4 text-sm" onSubmit={(event) => { event.preventDefault(); void saveReport(); }}>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <label className="space-y-1.5"><span className="font-medium">Category</span>
                       <select value={reportForm.category} onChange={(e) => setReportField('category', e.target.value)} className="nb-input">
                         <option>Emergency / personal safety</option><option>Theft or lost property</option><option>Harassment or assault</option><option>Missing person concern</option><option>Other</option>
@@ -573,11 +581,11 @@ export default function CitizenPage() {
                   <label className="block space-y-1.5"><span className="font-medium">Description of anyone involved</span>
                     <input value={reportForm.suspectDescription} onChange={(e) => setReportField('suspectDescription', e.target.value)} placeholder="Appearance, vehicle, direction of travel" className="nb-input" />
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <label className="space-y-1.5"><span className="font-medium">Witness name</span><input value={reportForm.witnessName} onChange={(e) => setReportField('witnessName', e.target.value)} className="nb-input" /></label>
                     <label className="space-y-1.5"><span className="font-medium">Witness contact</span><input value={reportForm.witnessContact} onChange={(e) => setReportField('witnessContact', e.target.value)} className="nb-input" /></label>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <label className="space-y-1.5"><span className="font-medium">Injuries</span><input value={reportForm.injuries} onChange={(e) => setReportField('injuries', e.target.value)} className="nb-input" /></label>
                     <label className="space-y-1.5"><span className="font-medium">Callback number</span><input type="tel" value={reportForm.callbackNumber} onChange={(e) => setReportField('callbackNumber', e.target.value)} className="nb-input" /></label>
                   </div>

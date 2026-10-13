@@ -223,6 +223,13 @@ export default function AuthorityPage() {
     return () => window.clearInterval(refreshTimer);
   }, [fetchDashboardData, fetchEfirs]);
 
+  useEffect(() => {
+    if (!showGeofenceForm) return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setShowGeofenceForm(false); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showGeofenceForm]);
+
   useEffect(() => subscribeToPrahariLive({
     onConnectionChange: (connected) => {
       setSocketConnected(connected);
@@ -404,12 +411,13 @@ export default function AuthorityPage() {
           <button onClick={() => void fetchDashboardData()} className="minimal-button minimal-button-secondary" disabled={loading} aria-label="Refresh">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button onClick={() => { setGeofenceError(null); setShowGeofenceForm(true); }} className="minimal-button minimal-button-secondary">
+          <button onClick={() => { setGeofenceError(null); setShowGeofenceForm(true); }} className="minimal-button minimal-button-secondary" aria-label="New geofence">
             <Plus size={16} /><span className="hidden sm:inline">Geofence</span>
           </button>
           <button
             onClick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; }}
             className="minimal-button minimal-button-secondary"
+            aria-label="Sign out"
           >
             <LogOut size={16} /><span className="hidden sm:inline">Sign out</span>
           </button>
@@ -424,7 +432,7 @@ export default function AuthorityPage() {
           </span>
         </section>
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <Metric label="Registered travellers" value={stats?.activeTourists} />
           <Metric label="Open incidents" value={stats?.liveIncidents} tone={stats?.liveIncidents ? 'text-danger' : undefined} />
           <Metric label="High-risk geofences" value={stats?.highRiskZones} />
@@ -556,13 +564,13 @@ export default function AuthorityPage() {
             <p className="px-6 pb-6 pt-3 text-sm text-ink-soft">No one is sharing their location yet.</p>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
+              <table className="w-full text-left text-sm md:min-w-[760px]">
                 <thead className="border-y border-line bg-surface-2 text-xs text-ink-soft">
                   <tr>
-                    <th scope="col" className="px-6 py-3 font-medium">Traveller</th>
+                    <th scope="col" className="px-5 py-3 font-medium sm:px-6">Traveller</th>
                     <th scope="col" className="px-4 py-3 font-medium">Last location</th>
-                    <th scope="col" className="px-4 py-3 font-medium">Updated</th>
-                    <th scope="col" className="px-4 py-3 font-medium">Identification profile</th>
+                    <th scope="col" className="hidden px-4 py-3 font-medium sm:table-cell">Updated</th>
+                    <th scope="col" className="hidden px-4 py-3 font-medium md:table-cell">Identification profile</th>
                     <th scope="col" className="px-4 py-3 font-medium">Case</th>
                   </tr>
                 </thead>
@@ -575,16 +583,16 @@ export default function AuthorityPage() {
                     const clothingSummary = traveller.clothingProfile?.summary;
                     return (
                       <tr key={traveller.touristId} className="align-top">
-                        <td className="px-6 py-3.5">
+                        <td className="px-5 py-3.5 sm:px-6">
                           <p className="font-medium">{traveller.name || 'Name not recorded'}</p>
                           <p className="mt-0.5 font-mono text-xs text-ink-soft">{traveller.touristId}</p>
                         </td>
                         <td className="px-4 py-3.5 font-mono text-xs">{hasLocation ? coordinatesForDisplay(location) : '—'}</td>
-                        <td className="px-4 py-3.5 text-xs text-ink-soft">
+                        <td className="hidden px-4 py-3.5 text-xs text-ink-soft sm:table-cell">
                           {lastReportedForDisplay(location?.timestamp)}
                           {isLive && <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">Live</span>}
                         </td>
-                        <td className="max-w-xs px-4 py-3.5 text-xs leading-5 text-ink-soft">
+                        <td className="hidden max-w-xs px-4 py-3.5 text-xs leading-5 text-ink-soft md:table-cell">
                           {clothingSummary ? (hasActiveCase ? clothingSummary : 'On file — visible during an active case') : '—'}
                         </td>
                         <td className="px-4 py-3.5 text-xs">
@@ -727,7 +735,7 @@ export default function AuthorityPage() {
 
 function Metric({ label, value, tone = 'text-ink' }: { label: string; value?: number | string; tone?: string }) {
   return (
-    <div className="minimal-card p-5">
+    <div className="minimal-card p-4 sm:p-5">
       <p className="text-sm text-ink-soft">{label}</p>
       <p className={`mt-1 text-2xl font-semibold tracking-tight ${tone}`}>{value ?? '—'}</p>
     </div>
